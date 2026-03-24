@@ -28,6 +28,8 @@ export class CanvasComponent implements OnInit {
   public currentRoomName = '';
   public currentRoomCode = '';
   public isHostClosed = false;
+  public showGrid = false;
+  private lastPos: { x: number, y: number } | null = null;
 
   constructor(
     private pixelService: PixelService,
@@ -55,13 +57,7 @@ export class CanvasComponent implements OnInit {
       this.currentRoomName = '';
       this.currentRoomCode = '';
       
-      if (path === 'global') {
-        this.currentRoomId = 1; // Global ID in DB
-        this.currentRoomName = 'Global';
-        this.canvasTitle = 'Pizarra Global (Colaborativa)';
-        this.loadInitialState();
-        this.setupWebSocket(this.currentRoomId);
-      } else if (path === 'room') {
+      if (path === 'room') {
         const code = url[1]?.path;
         this.pixelService.getRoom(code).subscribe(room => {
           if (room) {
@@ -102,7 +98,7 @@ export class CanvasComponent implements OnInit {
     if (this.currentRoomId === undefined) return;
     
     this.pixelService.getPixels(this.currentRoomId).subscribe(pixels => {
-      pixels.forEach(p => this.drawPixelLocally(p));
+      pixels.forEach(p => this.drawPixelLocally(p, false));
     });
   }
 
@@ -114,7 +110,7 @@ export class CanvasComponent implements OnInit {
         this.toastService.info('El anfitrión ha cerrado la sala.', 5000);
         setTimeout(() => this.router.navigate(['/']), 4000);
       } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
-        this.drawPixelLocally(pixel);
+        this.drawPixelLocally(pixel, false);
       }
     });
   }
@@ -171,23 +167,37 @@ export class CanvasComponent implements OnInit {
 
   public startDrawing(event: any): void {
     this.isDrawing = true;
+    const canvas = this.canvasRef.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX || event.touches?.[0]?.clientX) - rect.left;
+    const y = (event.clientY || event.touches?.[0]?.clientY) - rect.top;
+    
+    this.lastPos = { 
+      x: Math.floor(x / this.zoomLevel), 
+      y: Math.floor(y / this.zoomLevel) 
+    };
     this.draw(event);
   }
 
   public stopDrawing(): void {
     this.isDrawing = false;
+    this.lastPos = null;
   }
 
   @HostListener('mousemove', ['$event'])
+  @HostListener('touchmove', ['$event'])
   public draw(event: any): void {
     if (!this.isDrawing) return;
+    if (event.type === 'touchmove') event.preventDefault();
 
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
     
-    // Adjust coordinates for zoom level
-    const x = Math.floor((event.clientX - rect.left) / this.zoomLevel);
-    const y = Math.floor((event.clientY - rect.top) / this.zoomLevel);
+    const clientX = event.clientX || event.touches?.[0]?.clientX;
+    const clientY = event.clientY || event.touches?.[0]?.clientY;
+
+    const x = Math.floor((clientX - rect.left) / this.zoomLevel);
+    const y = Math.floor((clientY - rect.top) / this.zoomLevel);
 
     const pixel: Pixel = { 
       x, 
@@ -197,15 +207,40 @@ export class CanvasComponent implements OnInit {
       roomId: this.currentRoomId 
     };
     
-    this.drawPixelLocally(pixel);
+    this.drawPixelLocally(pixel, true);
     this.pixelService.sendPixel(pixel);
   }
 
-  private drawPixelLocally(pixel: Pixel): void {
-    this.ctx.fillStyle = pixel.color;
-    this.ctx.beginPath();
-    this.ctx.arc(pixel.x, pixel.y, pixel.size || 5, 0, Math.PI * 2);
-    this.ctx.fill();
+  private drawPixelLocally(pixel: Pixel, isLocal: boolean): void {
+    if (isLocal) {
+      this.ctx.strokeStyle = pixel.color;
+      this.ctx.lineWidth = pixel.size || 5;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+
+      this.ctx.beginPath();
+      if (this.lastPos) {
+        this.ctx.moveTo(this.lastPos.x, this.lastPos.y);
+        this.ctx.lineTo(pixel.x, pixel.y);
+      } else {
+        this.ctx.moveTo(pixel.x, pixel.y);
+        this.ctx.lineTo(pixel.x, pixel.y);
+      }
+      this.ctx.stroke();
+      this.lastPos = { x: pixel.x, y: pixel.y };
+    } else {
+      // For remote pixels, we draw points to avoid connecting different users
+      this.ctx.fillStyle = pixel.color;
+      this.ctx.beginPath();
+      this.ctx.arc(pixel.x, pixel.y, (pixel.size || 5) / 2, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+
+  public toggleGrid(): void {
+    this.showGrid = !this.showGrid;
+    // We don't clear the canvas because we don't want to lose drawings.
+    // Instead, the grid will be a CSS background on the container for performance.
   }
 
   public clearCanvas(): void {

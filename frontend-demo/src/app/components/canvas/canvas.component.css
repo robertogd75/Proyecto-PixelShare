@@ -165,6 +165,43 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
 
 .btn-clear:hover { background: #ff6b81; transform: scale(1.05); }
 
+/* Grid Styles */
+canvas.show-grid {
+  background-image: 
+    linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Switch UI */
+.grid-toggle { gap: 8px !important; }
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ddd;
+  transition: .4s;
+  border-radius: 20px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px; width: 14px;
+  left: 3px; bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider { background-color: #000; }
+input:checked + .slider:before { transform: translateX(14px); }
+
 .status-indicator {
   position: fixed;
   bottom: 100px; /* Above toolbar */

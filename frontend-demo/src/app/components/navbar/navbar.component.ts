@@ -18,7 +18,7 @@ import { finalize, timeout } from 'rxjs';
       </div>
       
       <div class="nav-links">
-        <a routerLink="/global" routerLinkActive="active" class="nav-link">Pizarra Global</a>
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
         <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
       </div>

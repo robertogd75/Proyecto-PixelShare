@@ -117,6 +117,7 @@
   align-items: flex-start;
   box-sizing: border-box;
   min-width: 100%;
+  min-height: 100%;
   line-height: 0;
   font-size: 0;
 }

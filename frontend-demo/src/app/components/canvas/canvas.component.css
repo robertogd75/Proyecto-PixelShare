@@ -111,13 +111,12 @@
 }
 
 .panning-container {
-  min-width: 100%;
-  min-height: 100%;
-  padding: 20px;
-  display: flex;
+  display: inline-flex;
+  padding: 20px 20px 0 20px;
   justify-content: center;
   align-items: flex-start;
   box-sizing: border-box;
+  min-width: 100%;
 }
 
 canvas {

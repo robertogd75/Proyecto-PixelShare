@@ -7,7 +7,7 @@ import { Pixel } from '../models/pixel.model';
     providedIn: 'root'
 })
 export class PixelService {
-    private readonly apiUrl = 'http://localhost:8080/api/pixels';
+    private readonly apiUrl = '/api/pixels';
 
     constructor(private http: HttpClient) {}
 

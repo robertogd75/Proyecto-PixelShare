@@ -96,7 +96,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                 synchronized (sessions) {
                     for (WebSocketSession s : sessions) {
                         Long sRoomId = sessionRoomId.get(s.getId());
-                        if (roomId.equals(sRoomId) && s.isOpen()) {
+                        if (roomId.equals(sRoomId) && s.isOpen() && msgJson != null) {
                             s.sendMessage(new TextMessage(msgJson));
                         }
                     }

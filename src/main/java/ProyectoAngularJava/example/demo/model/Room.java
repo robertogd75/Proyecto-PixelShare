@@ -23,7 +23,7 @@ public class Room {
     
     private String code;
     private String name;
-    private Integer width;
-    private Integer height;
-    private Integer maxParticipants;
+    private Integer width = 5000;
+    private Integer height = 5000;
+    private Integer maxParticipants = 100;
 }

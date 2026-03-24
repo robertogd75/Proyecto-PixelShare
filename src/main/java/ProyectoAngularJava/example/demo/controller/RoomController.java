@@ -18,7 +18,14 @@ public class RoomController {
 
     @PostMapping
     public Room createRoom(@RequestBody Room room) {
-        return roomRepository.save(room);
+        try {
+            System.out.println("Attempting to create room: " + room.getName() + " with code: " + room.getCode());
+            return roomRepository.save(room);
+        } catch (Exception e) {
+            System.err.println("CRITICAL ERROR: Failed to create room in database!");
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @GetMapping("/{code}")

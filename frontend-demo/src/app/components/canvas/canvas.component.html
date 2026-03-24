@@ -51,18 +51,20 @@
     </div>
   </div>
 
+  <!-- Floating toolbar toggle button (always visible, bottom-left) -->
+  <button class="btn-floating-toggle" (click)="toolbarVisible = !toolbarVisible"
+          [title]="toolbarVisible ? 'Ocultar herramientas' : 'Mostrar herramientas'">
+    {{ toolbarVisible ? '✕' : '⚙️' }}
+  </button>
+
   <div class="toolbar" [class.toolbar-hidden]="!toolbarVisible">
-    <button class="btn-toggle-toolbar" (click)="toolbarVisible = !toolbarVisible" title="Minimizar ajustes">
-      {{ toolbarVisible ? '✕' : '⚙️' }}
-    </button>
-    <div class="toolbar-controls" [class.controls-hidden]="!toolbarVisible">
     <div class="tool-group">
       <span class="tool-label">Color</span>
       <input type="color" [(ngModel)]="currentColor">
     </div>
 
     <div class="tool-group">
-      <span class="tool-label">Tamaño</span>
+      <span class="tool-label">Tamaño pincel</span>
       <input type="range" min="1" max="50" [(ngModel)]="brushSize">
       <span class="tool-value">{{ brushSize }}px</span>
     </div>
@@ -74,7 +76,7 @@
     </div>
 
     <div class="tool-group size-group" *ngIf="!currentRoomId || isRoomHost">
-      <span class="tool-label">Tamaño</span>
+      <span class="tool-label">Tamaño pizarra</span>
       <select (change)="changeCanvasSize($any($event.target).value)" class="nav-select">
         <option value="small">Pequeño</option>
         <option value="normal" selected>Normal</option>
@@ -92,7 +94,6 @@
     </div>
 
     <button class="btn-clear" (click)="clearCanvas()">Limpiar Pizarra</button>
-    </div>
   </div>
 
   <!-- Clear Confirmation Overlay -->

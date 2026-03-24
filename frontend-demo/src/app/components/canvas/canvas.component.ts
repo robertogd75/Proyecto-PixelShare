@@ -81,6 +81,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
             this.isRoomHost = sessionStorage.getItem('pixelshare_host_room') === room.code;
             this.canvasWidth = 5657;
             this.canvasHeight = 4000;
+            this.resizeCanvas();
             this.loadInitialState();
             this.setupWebSocket(this.currentRoomId);
           }

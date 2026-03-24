@@ -48,16 +48,15 @@ import { PixelService } from '../../services/pixel.service';
               <span>📋 Copiar Enlace de Invitación</span>
             </button>
           </div>
-        </div>
 
-        <div class="modal-footer">
-          <button class="btn-cancel" (click)="closeModal()" *ngIf="modalMode !== 'success'">Cancelar</button>
-          <button class="btn-submit" (click)="submitModal()" [disabled]="(modalMode === 'create' && !roomName) || (modalMode === 'join' && !roomCode)">
-            {{ modalActionText }}
-          </button>
+          <div class="modal-footer">
+            <button class="btn-cancel" (click)="closeModal()" *ngIf="modalMode !== 'success'">Cancelar</button>
+            <button class="btn-submit" (click)="submitModal()" [disabled]="(modalMode === 'create' && !roomName) || (modalMode === 'join' && !roomCode)">
+              {{ modalActionText }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
   `,
   styles: [`
     .glass-nav {

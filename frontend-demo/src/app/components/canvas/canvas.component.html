@@ -69,7 +69,7 @@
       <span class="tool-value">{{ (zoomLevel * 100).toFixed(0) }}%</span>
     </div>
 
-    <div class="tool-group size-group" *ngIf="!currentRoomId">
+    <div class="tool-group size-group" *ngIf="!currentRoomId || isRoomHost">
       <span class="tool-label">Tamaño</span>
       <select (change)="changeCanvasSize($any($event.target).value)" class="nav-select">
         <option value="small">Pequeño</option>

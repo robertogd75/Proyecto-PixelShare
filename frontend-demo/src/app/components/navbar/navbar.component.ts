@@ -16,7 +16,7 @@ import { finalize, timeout } from 'rxjs';
         <div class="logo-pixel"></div>
         <span class="logo-text">PixelShare</span>
       </div>
-      
+
       <div class="nav-links">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
@@ -31,7 +31,7 @@ import { finalize, timeout } from 'rxjs';
           <h2>{{ modalTitle }}</h2>
           <button class="btn-close" (click)="closeModal()">&times;</button>
         </div>
-        
+
         <div class="modal-body">
           <p class="description">{{ modalDescription }}</p>
 
@@ -250,27 +250,27 @@ export class NavbarComponent {
   isCreating = false;
 
   constructor(
-    private router: Router, 
+    private router: Router,
     private pixelService: PixelService,
     private toastService: ToastService,
     private cdr: ChangeDetectorRef
   ) {}
 
-  get modalTitle(): string { 
+  get modalTitle(): string {
     if (this.modalMode === 'success') return '¡Sala Creada!';
-    return this.modalMode === 'create' ? 'Nueva Pizarra' : 'Entrar a Sala'; 
+    return this.modalMode === 'create' ? 'Nueva Pizarra' : 'Entrar a Sala';
   }
 
-  get modalDescription(): string { 
+  get modalDescription(): string {
     if (this.modalMode === 'success') return 'Tu sala está lista. Comparte el acceso con tus amigos.';
-    return this.modalMode === 'create' 
-      ? 'Define un nombre para tu espacio de dibujo colaborativo.' 
+    return this.modalMode === 'create'
+      ? 'Define un nombre para tu espacio de dibujo colaborativo.'
       : 'Escribe el código de invitación para unirte.';
   }
 
-  get modalActionText(): string { 
+  get modalActionText(): string {
     if (this.modalMode === 'success') return 'Entrar a la Sala';
-    return this.modalMode === 'create' ? 'Crear Ahora' : 'Unirse'; 
+    return this.modalMode === 'create' ? 'Crear Ahora' : 'Unirse';
   }
 
   openJoinModal() {
@@ -333,6 +333,7 @@ export class NavbarComponent {
           });
       }
     } else if (this.modalMode === 'success') {
+      sessionStorage.setItem('pixelshare_host_room', this.inviteCode);
       this.router.navigateByUrl(`/room/${this.inviteCode}`);
       this.closeModal();
     }

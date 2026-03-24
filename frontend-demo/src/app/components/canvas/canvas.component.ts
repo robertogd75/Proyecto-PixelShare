@@ -31,6 +31,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public currentRoomCode = '';
   public isHostClosed = false;
   public showGrid = false;
+  public isRoomHost = false;
   public canvasWidth = 2828;  // A4 landscape: width = height * √2
   public canvasHeight = 2000;
   private lastPos: { x: number, y: number } | null = null;
@@ -77,6 +78,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
             this.currentRoomName = room.name;
             this.currentRoomCode = room.code;
             this.canvasTitle = `Sala: ${room.name}`;
+            this.isRoomHost = sessionStorage.getItem('pixelshare_host_room') === room.code;
+            this.canvasWidth = 5657;
+            this.canvasHeight = 4000;
             this.loadInitialState();
             this.setupWebSocket(this.currentRoomId);
           }
@@ -94,12 +98,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   @HostListener('window:resize')
   public resizeCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
-    const isRoom = this.currentRoomId !== undefined;
-
-    if (isRoom) {
-      this.canvasWidth = 5657;
-      this.canvasHeight = 4000;
-    }
 
     if (canvas.width !== this.canvasWidth || canvas.height !== this.canvasHeight) {
       canvas.width = this.canvasWidth;
@@ -129,8 +127,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public changeCanvasSize(size: string): void {
-    if (this.currentRoomId !== undefined) {
-      this.toastService.info('En las salas el tamaño es fijo (5000x5000).');
+    if (this.currentRoomId !== undefined && !this.isRoomHost) {
+      this.toastService.info('Solo el anfitrión puede cambiar el tamaño de la sala.');
       return;
     }
 
@@ -145,6 +143,18 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.toastService.success(`Tamaño cambiado a ${size}`);
     this.fitZoom();
     this.zoomLevel = this.minZoom;
+
+    // Broadcast size change to all room participants
+    if (this.currentRoomId !== undefined) {
+      const resizeMsg: Pixel = {
+        x: 0, y: 0, color: '',
+        type: 'RESIZE',
+        width: this.canvasWidth,
+        height: this.canvasHeight,
+        roomId: this.currentRoomId
+      };
+      this.pixelService.sendPixel(resizeMsg);
+    }
   }
 
   private loadInitialState(): void {
@@ -162,6 +172,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         this.isHostClosed = true;
         this.toastService.info('El anfitrión ha cerrado la sala.', 5000);
         setTimeout(() => this.router.navigate(['/']), 4000);
+      } else if (pixel.type === 'RESIZE' && pixel.width && pixel.height) {
+        this.canvasWidth = pixel.width;
+        this.canvasHeight = pixel.height;
+        this.resizeCanvas();
+        this.fitZoom();
       } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
         this.drawPixelLocally(pixel, false);
       }

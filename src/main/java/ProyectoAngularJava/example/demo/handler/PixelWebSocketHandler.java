@@ -153,7 +153,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull TextMessage message) throws Exception {
         Pixel pixel = objectMapper.readValue(message.getPayload(), Pixel.class);
         
-        if (pixel.getRoomId() != null) {
+        if (pixel.getRoomId() != null && !"RESIZE".equals(pixel.getType())) {
             pixelRepository.save(pixel);
         }
         

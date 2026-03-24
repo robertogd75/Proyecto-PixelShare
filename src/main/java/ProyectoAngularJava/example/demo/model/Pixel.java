@@ -29,5 +29,11 @@ public class Pixel {
     private Long roomId;
 
     @Transient
-    private String type; // For WebSocket control messages (e.g., "HOST_CLOSED")
+    private String type; // For WebSocket control messages (e.g., "HOST_CLOSED", "RESIZE")
+
+    @Transient
+    private Integer width; // Used in RESIZE messages
+
+    @Transient
+    private Integer height; // Used in RESIZE messages
 }

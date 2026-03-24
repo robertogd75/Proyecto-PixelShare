@@ -33,6 +33,9 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     private final Map<String, Long> sessionRoomId = new ConcurrentHashMap<>();
     private final Map<Long, Integer> roomParticipants = new ConcurrentHashMap<>();
     private final Map<Long, Long> emptyRoomsSince = new ConcurrentHashMap<>();
+    
+    // Map of roomId -> sessionId of the host (first one to join)
+    private final Map<Long, String> roomHostSessionId = new ConcurrentHashMap<>();
 
     public PixelWebSocketHandler(PixelRepository pixelRepository, RoomRepository roomRepository) {
         this.pixelRepository = pixelRepository;
@@ -40,7 +43,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(@org.springframework.lang.NonNull WebSocketSession session) throws Exception {
         sessions.add(session);
         try {
             URI uri = session.getUri();
@@ -53,11 +56,15 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                     sessionRoomId.put(session.getId(), roomId);
                     
                     // Update participants count
-                    roomParticipants.merge(roomId, 1, Integer::sum);
+                    roomParticipants.merge(roomId, 1, (oldV, newV) -> oldV + newV);
+                    
+                    // Assign host if none exists for this room
+                    roomHostSessionId.putIfAbsent(roomId, session.getId());
                     
                     // Room is active, remove from cleanup list
                     emptyRoomsSince.remove(roomId);
-                    System.out.println("Session " + session.getId() + " joined room " + roomId);
+                    System.out.println("Session " + session.getId() + " joined room " + roomId + 
+                                     (session.getId().equals(roomHostSessionId.get(roomId)) ? " (HOST)" : ""));
                 }
             }
         } catch (Exception e) {
@@ -66,20 +73,53 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+    public void afterConnectionClosed(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull CloseStatus status) throws Exception {
         sessions.remove(session);
-        Long roomId = sessionRoomId.remove(session.getId());
+        String sessionId = session.getId();
+        Long roomId = sessionRoomId.remove(sessionId);
         
-        if (roomId != null && roomId > 1) { // Global room (often ID 1) is persistent
-            Integer current = roomParticipants.get(roomId);
-            if (current != null) {
-                int newVal = current - 1;
-                if (newVal <= 0) {
-                    roomParticipants.remove(roomId);
-                    emptyRoomsSince.put(roomId, System.currentTimeMillis());
-                    System.out.println("Room " + roomId + " is now empty. Grace period started.");
-                } else {
-                    roomParticipants.put(roomId, newVal);
+        if (roomId != null && roomId > 1) { 
+            // Check if this was the host
+            String hostSessionId = roomHostSessionId.get(roomId);
+            if (sessionId.equals(hostSessionId)) {
+                System.out.println("Host left room " + roomId + ". Closing room for everyone.");
+                roomHostSessionId.remove(roomId);
+                roomParticipants.remove(roomId);
+                emptyRoomsSince.remove(roomId);
+                
+                // Broadcast "HOST_CLOSED" to remaining sessions in this room
+                Pixel closeMsg = new Pixel();
+                closeMsg.setType("HOST_CLOSED");
+                closeMsg.setRoomId(roomId);
+                String msgJson = objectMapper.writeValueAsString(closeMsg);
+                
+                synchronized (sessions) {
+                    for (WebSocketSession s : sessions) {
+                        Long sRoomId = sessionRoomId.get(s.getId());
+                        if (roomId.equals(sRoomId) && s.isOpen()) {
+                            s.sendMessage(new TextMessage(msgJson));
+                        }
+                    }
+                }
+                
+                // Delete room from database immediately
+                try {
+                    roomRepository.deleteById(roomId);
+                } catch (Exception e) {
+                    System.err.println("Error deleting room on host exit: " + e.getMessage());
+                }
+            } else {
+                // Not the host, just decrement participant count
+                Integer current = roomParticipants.get(roomId);
+                if (current != null) {
+                    int newVal = current - 1;
+                    if (newVal <= 0) {
+                        roomParticipants.remove(roomId);
+                        emptyRoomsSince.put(roomId, System.currentTimeMillis());
+                        System.out.println("Room " + roomId + " is now empty. Grace period started.");
+                    } else {
+                        roomParticipants.put(roomId, newVal);
+                    }
                 }
             }
         }
@@ -110,7 +150,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    protected void handleTextMessage(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull TextMessage message) throws Exception {
         Pixel pixel = objectMapper.readValue(message.getPayload(), Pixel.class);
         
         if (pixel.getRoomId() != null) {

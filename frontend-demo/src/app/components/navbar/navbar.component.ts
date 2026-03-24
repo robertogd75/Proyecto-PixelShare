@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-navbar',
@@ -36,7 +37,7 @@ import { PixelService } from '../../services/pixel.service';
           <!-- Create Mode -->
           <div class="form-group" *ngIf="modalMode === 'create'">
             <label>Nombre de la Pizarra</label>
-            <input type="text" [(ngModel)]="roomName" placeholder="Ej: Proyecto Arte Final" (keyup.enter)="submitModal()">
+            <input type="text" [(ngModel)]="roomName" placeholder="Ej: Proyecto Arte Final" (keyup.enter)="submitModal()" [disabled]="isCreating">
           </div>
 
           <!-- Join Mode -->
@@ -63,8 +64,9 @@ import { PixelService } from '../../services/pixel.service';
 
           <div class="modal-footer">
             <button class="btn-cancel" (click)="closeModal()">{{ modalMode === 'success' ? 'Cerrar' : 'Cancelar' }}</button>
-            <button class="btn-submit" (click)="submitModal()" [disabled]="(modalMode === 'create' && !roomName) || (modalMode === 'join' && !roomCode)">
-              {{ modalActionText }}
+            <button class="btn-submit" (click)="submitModal()" [disabled]="(modalMode === 'create' && (!roomName || isCreating)) || (modalMode === 'join' && !roomCode)">
+              <span *ngIf="!isCreating">{{ modalActionText }}</span>
+              <span *ngIf="isCreating">Creando...</span>
             </button>
           </div>
         </div>
@@ -244,8 +246,13 @@ export class NavbarComponent {
   roomName = '';
   roomCode = '';
   inviteCode = '';
+  isCreating = false;
 
-  constructor(private router: Router, private pixelService: PixelService) {}
+  constructor(
+    private router: Router, 
+    private pixelService: PixelService,
+    private toastService: ToastService
+  ) {}
 
   get modalTitle(): string { 
     if (this.modalMode === 'success') return '¡Sala Creada!';
@@ -274,6 +281,7 @@ export class NavbarComponent {
     this.modalMode = 'create';
     this.roomName = '';
     this.showModal = true;
+    this.isCreating = false;
   }
 
   closeModal() {
@@ -287,11 +295,20 @@ export class NavbarComponent {
         this.closeModal();
       }
     } else if (this.modalMode === 'create') {
-      if (this.roomName) {
+      if (this.roomName && !this.isCreating) {
+        this.isCreating = true;
         const code = this.generateSecureCode();
-        this.pixelService.createRoom({ code, name: this.roomName }).subscribe(room => {
-          this.inviteCode = room.code;
-          this.modalMode = 'success';
+        this.pixelService.createRoom({ code, name: this.roomName }).subscribe({
+          next: room => {
+            this.inviteCode = room.code;
+            this.modalMode = 'success';
+            this.isCreating = false;
+            this.toastService.success('¡Sala creada correctamente!');
+          },
+          error: () => {
+            this.isCreating = false;
+            this.toastService.error('Hubo un error al crear la sala.');
+          }
         });
       }
     } else if (this.modalMode === 'success') {
@@ -312,7 +329,7 @@ export class NavbarComponent {
   private copyToClipboard(text: string, message: string) {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(() => {
-        alert(message);
+        this.toastService.success(message);
       }).catch(err => {
         this.fallbackCopyTextToClipboard(text, message);
       });
@@ -332,9 +349,9 @@ export class NavbarComponent {
     textArea.select();
     try {
       document.execCommand('copy');
-      alert(message);
+      this.toastService.success(message);
     } catch (err) {
-      alert('Error: No se pudo copiar. Por favor, cópialo manualmente.');
+      this.toastService.error('Error: Por favor, copia el texto manualmente.');
     }
     document.body.removeChild(textArea);
   }

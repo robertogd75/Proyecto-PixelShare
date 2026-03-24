@@ -183,3 +183,66 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
 
 .dot { width: 10px; height: 10px; border-radius: 50%; background: #2ed573; animation: pulse 2s infinite; }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+/* Host Closed Overlay */
+.host-closed-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.5s ease;
+}
+
+.host-closed-card {
+  background: white;
+  padding: 40px;
+  border-radius: 30px;
+  text-align: center;
+  max-width: 400px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.icon-closed {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.host-closed-card h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #000;
+  margin-bottom: 15px;
+}
+
+.host-closed-card p {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+.loader-bar {
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.loader-bar .progress {
+  height: 100%;
+  background: #000;
+  width: 0%;
+  animation: loadProgress 4s linear forwards;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes loadProgress { from { width: 0%; } to { width: 100%; } }

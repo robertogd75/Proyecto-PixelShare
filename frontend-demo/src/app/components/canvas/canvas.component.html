@@ -68,4 +68,16 @@
     <div class="dot"></div>
     En línea y sincronizado
   </div>
+
+  <!-- Host Closed Overlay -->
+  <div class="host-closed-overlay" *ngIf="isHostClosed">
+    <div class="host-closed-card">
+      <div class="icon-closed">⚠️</div>
+      <h1>Sala Cerrada</h1>
+      <p>El anfitrión ha finalizado la sesión. Serás redirigido a la página principal en unos segundos.</p>
+      <div class="loader-bar">
+        <div class="progress"></div>
+      </div>
+    </div>
+  </div>
 </div>

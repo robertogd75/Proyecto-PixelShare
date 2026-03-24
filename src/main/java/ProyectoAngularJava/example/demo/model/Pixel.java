@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -26,4 +27,7 @@ public class Pixel {
     private String color;
     private Integer size;
     private Long roomId;
+
+    @Transient
+    private String type; // For WebSocket control messages (e.g., "HOST_CLOSED")
 }

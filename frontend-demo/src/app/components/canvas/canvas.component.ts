@@ -1,9 +1,11 @@
 import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule, UrlSegment } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
+import { ToastService } from '../../services/toast.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-canvas',
@@ -25,10 +27,13 @@ export class CanvasComponent implements OnInit {
   public canvasTitle = 'Pizarra Privada';
   public currentRoomName = '';
   public currentRoomCode = '';
+  public isHostClosed = false;
 
   constructor(
     private pixelService: PixelService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -104,7 +109,11 @@ export class CanvasComponent implements OnInit {
   private setupWebSocket(roomId?: number): void {
     this.pixelService.connect(roomId).subscribe(pixel => {
       // Basic safety check though backend now handles filtering
-      if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
+      if (pixel.type === 'HOST_CLOSED') {
+        this.isHostClosed = true;
+        this.toastService.info('El anfitrión ha cerrado la sala.', 5000);
+        setTimeout(() => this.router.navigate(['/']), 4000);
+      } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
         this.drawPixelLocally(pixel);
       }
     });
@@ -133,7 +142,7 @@ export class CanvasComponent implements OnInit {
   private copyToClipboard(text: string, message: string) {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(() => {
-        alert(message);
+        this.toastService.success(message);
       }).catch(err => {
         this.fallbackCopyTextToClipboard(text, message);
       });
@@ -153,9 +162,9 @@ export class CanvasComponent implements OnInit {
     textArea.select();
     try {
       document.execCommand('copy');
-      alert(message);
+      this.toastService.success(message);
     } catch (err) {
-      alert('Error: No se pudo copiar. Por favor, cópialo manualmente.');
+      this.toastService.error('Error: No se pudo copiar. Por favor, cópialo manualmente.');
     }
     document.body.removeChild(textArea);
   }

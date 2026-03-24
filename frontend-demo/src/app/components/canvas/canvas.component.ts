@@ -16,11 +16,11 @@ import { Subscription } from 'rxjs';
 })
 export class CanvasComponent implements OnInit {
   @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
-  
+
   private ctx!: CanvasRenderingContext2D;
   private isDrawing = false;
-  private currentRoomId: number | undefined = undefined;
-  
+  protected currentRoomId: number | undefined = undefined;
+
   public currentColor = '#000000';
   public brushSize = 5;
   public zoomLevel = 1.0;
@@ -58,7 +58,7 @@ export class CanvasComponent implements OnInit {
       const path = url[0]?.path;
       this.currentRoomName = '';
       this.currentRoomCode = '';
-      
+
       if (path === 'room') {
         const code = url[1]?.path;
         this.pixelService.getRoom(code).subscribe(room => {
@@ -85,7 +85,7 @@ export class CanvasComponent implements OnInit {
   public resizeCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
     const isRoom = this.currentRoomId !== undefined;
-    
+
     // For rooms, we use fixed large dimensions. For private, we use user-selected or default.
     const targetWidth = isRoom ? 5000 : this.canvasWidth;
     const targetHeight = isRoom ? 5000 : this.canvasHeight;
@@ -119,14 +119,14 @@ export class CanvasComponent implements OnInit {
       case 'large': this.canvasWidth = 3000; this.canvasHeight = 3000; break;
       case 'huge': this.canvasWidth = 5000; this.canvasHeight = 5000; break;
     }
-    
+
     this.resizeCanvas();
     this.toastService.success(`Tamaño cambiado a ${size}`);
   }
 
   private loadInitialState(): void {
     if (this.currentRoomId === undefined) return;
-    
+
     this.pixelService.getPixels(this.currentRoomId).subscribe(pixels => {
       pixels.forEach(p => this.drawPixelLocally(p, false));
     });
@@ -201,10 +201,10 @@ export class CanvasComponent implements OnInit {
     const rect = canvas.getBoundingClientRect();
     const x = (event.clientX || event.touches?.[0]?.clientX) - rect.left;
     const y = (event.clientY || event.touches?.[0]?.clientY) - rect.top;
-    
-    this.lastPos = { 
-      x: Math.floor(x / this.zoomLevel), 
-      y: Math.floor(y / this.zoomLevel) 
+
+    this.lastPos = {
+      x: Math.floor(x / this.zoomLevel),
+      y: Math.floor(y / this.zoomLevel)
     };
     this.draw(event);
   }
@@ -222,21 +222,21 @@ export class CanvasComponent implements OnInit {
 
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
-    
+
     const clientX = event.clientX || event.touches?.[0]?.clientX;
     const clientY = event.clientY || event.touches?.[0]?.clientY;
 
     const x = Math.floor((clientX - rect.left) / this.zoomLevel);
     const y = Math.floor((clientY - rect.top) / this.zoomLevel);
 
-    const pixel: Pixel = { 
-      x, 
-      y, 
-      color: this.currentColor, 
+    const pixel: Pixel = {
+      x,
+      y,
+      color: this.currentColor,
       size: this.brushSize,
-      roomId: this.currentRoomId 
+      roomId: this.currentRoomId
     };
-    
+
     this.drawPixelLocally(pixel, true);
     this.pixelService.sendPixel(pixel);
   }

@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, AfterViewInit, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/router';
@@ -14,7 +14,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.css']
 })
-export class CanvasComponent implements OnInit {
+export class CanvasComponent implements OnInit, AfterViewInit {
   @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -45,6 +45,14 @@ export class CanvasComponent implements OnInit {
   ngOnInit(): void {
     this.initCanvas();
     this.handleRouting();
+  }
+
+  ngAfterViewInit(): void {
+    // DOM is fully rendered here — clientHeight is now accurate
+    requestAnimationFrame(() => {
+      this.fitZoom();
+      this.zoomLevel = this.minZoom;
+    });
   }
 
   private initCanvas(): void {
@@ -88,7 +96,6 @@ export class CanvasComponent implements OnInit {
     const canvas = this.canvasRef.nativeElement;
     const isRoom = this.currentRoomId !== undefined;
 
-    // Keep canvasWidth/canvasHeight always in sync with actual canvas dimensions
     if (isRoom) {
       this.canvasWidth = 5657;
       this.canvasHeight = 4000;
@@ -99,7 +106,7 @@ export class CanvasComponent implements OnInit {
       canvas.height = this.canvasHeight;
       this.reinitCanvasSettings();
     }
-    this.fitZoom();
+    requestAnimationFrame(() => this.fitZoom());
   }
 
   /** Minimum zoom = exact height-fit so the canvas fills the viewport vertically with zero gray space. */

@@ -88,13 +88,15 @@ export class CanvasComponent implements OnInit {
     const canvas = this.canvasRef.nativeElement;
     const isRoom = this.currentRoomId !== undefined;
 
-    // For rooms, we use fixed large dimensions. For private, we use user-selected or default.
-    const targetWidth = isRoom ? 5657 : this.canvasWidth;
-    const targetHeight = isRoom ? 4000 : this.canvasHeight;
+    // Keep canvasWidth/canvasHeight always in sync with actual canvas dimensions
+    if (isRoom) {
+      this.canvasWidth = 5657;
+      this.canvasHeight = 4000;
+    }
 
-    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
+    if (canvas.width !== this.canvasWidth || canvas.height !== this.canvasHeight) {
+      canvas.width = this.canvasWidth;
+      canvas.height = this.canvasHeight;
       this.reinitCanvasSettings();
     }
     this.fitZoom();

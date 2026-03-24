@@ -166,10 +166,16 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
 }
 
 /* Grid Overlay Fix */
+.canvas-scaler {
+  flex-shrink: 0;
+  position: relative;
+}
+
 .canvas-wrapper {
   position: relative;
   display: inline-block;
   box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  transform-origin: top left;
 }
 
 .grid-overlay {

@@ -30,18 +30,23 @@
 
   <div class="canvas-viewport" #viewport>
     <div class="panning-container">
-      <div class="canvas-wrapper" [style.transform]="'scale(' + zoomLevel + ')'">
-        <canvas #canvasElement
-                (mousedown)="startDrawing($event)"
-                (mousemove)="draw($event)"
-                (mouseup)="stopDrawing()"
-                (mouseleave)="stopDrawing()"
-                (touchstart)="startDrawing($event)"
-                (touchmove)="draw($event)"
-                (touchend)="stopDrawing()">
-        </canvas>
-        <div class="grid-overlay" [class.active]="showGrid"
-             [style.background-image]="gridBackgroundImage"></div>
+      <!-- canvas-scaler takes exactly the visual (post-zoom) space, eliminating dead margins -->
+      <div class="canvas-scaler"
+           [style.width.px]="canvasWidth * zoomLevel"
+           [style.height.px]="canvasHeight * zoomLevel">
+        <div class="canvas-wrapper" [style.transform]="'scale(' + zoomLevel + ')'">
+          <canvas #canvasElement
+                  (mousedown)="startDrawing($event)"
+                  (mousemove)="draw($event)"
+                  (mouseup)="stopDrawing()"
+                  (mouseleave)="stopDrawing()"
+                  (touchstart)="startDrawing($event)"
+                  (touchmove)="draw($event)"
+                  (touchend)="stopDrawing()">
+          </canvas>
+          <div class="grid-overlay" [class.active]="showGrid"
+               [style.background-image]="gridBackgroundImage"></div>
+        </div>
       </div>
     </div>
   </div>

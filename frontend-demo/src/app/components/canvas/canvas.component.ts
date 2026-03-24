@@ -100,6 +100,8 @@ export class CanvasComponent implements OnInit {
     this.draw(event);
   }
 
+  @HostListener('window:mouseup')
+  @HostListener('window:touchend')
   public stopDrawing(): void {
     this.isDrawing = false;
     if (this.ctx) this.ctx.beginPath();
@@ -108,6 +110,7 @@ export class CanvasComponent implements OnInit {
   public draw(event: any): void {
     if (!this.isDrawing) return;
 
+    event.preventDefault(); // Prevent scrolling while drawing on mobile
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
     

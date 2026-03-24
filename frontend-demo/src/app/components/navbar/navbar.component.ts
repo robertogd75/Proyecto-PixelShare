@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 
 @Component({
   selector: 'app-navbar',
@@ -11,8 +11,11 @@ import { RouterModule } from '@angular/router';
       <div class="logo">PixelShare</div>
       <div class="nav-links">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Mi Pizarra</a>
-        <a routerLink="/global" routerLinkActive="active">Global</a>
-        <button class="btn-create" (click)="onCreateRoom()">+ Crear Sala</button>
+        <a routerLink="/global" routerLinkActive="active">Mundial</a>
+        <div class="room-actions">
+          <button class="btn-secondary" (click)="onJoinRoom()">Unirse</button>
+          <button class="btn-primary" (click)="onCreateRoom()">+ Crear Sala</button>
+        </div>
       </div>
     </nav>
   `,
@@ -43,8 +46,12 @@ import { RouterModule } from '@angular/router';
     }
     .nav-links {
       display: flex;
-      gap: 20px;
+      gap: 25px;
       align-items: center;
+    }
+    .room-actions {
+      display: flex;
+      gap: 10px;
     }
     a {
       text-decoration: none;
@@ -56,29 +63,42 @@ import { RouterModule } from '@angular/router';
     a:hover, a.active {
       color: #000;
     }
-    .btn-create {
-      background: #000;
-      color: #fff;
+    button {
       border: none;
       padding: 8px 18px;
       border-radius: 20px;
       font-weight: 600;
       font-size: 0.85rem;
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: transform 0.2s, background 0.2s;
     }
-    .btn-create:hover {
+    .btn-primary {
+      background: #000;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #eee;
+      color: #333;
+    }
+    button:hover {
       transform: scale(1.05);
     }
   `]
 })
 export class NavbarComponent {
+  constructor(private router: Router) {}
+
+  onJoinRoom() {
+    const code = prompt("Introduce el código de la sala:");
+    if (code) {
+      window.location.href = `/room/${code.toUpperCase()}`;
+    }
+  }
+
   onCreateRoom() {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const name = prompt("Nombre de la sala:");
     if (name) {
-      // Logic to create room in backend would go here.
-      // For now, let's just navigate to the route.
       window.location.href = `/room/${code}`;
     }
   }

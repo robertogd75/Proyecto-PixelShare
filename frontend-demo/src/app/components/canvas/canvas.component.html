@@ -52,12 +52,14 @@
   </div>
 
   <!-- Floating toolbar toggle button (always visible, bottom-left) -->
-  <button class="btn-floating-toggle" (click)="toolbarVisible = !toolbarVisible"
-          [title]="toolbarVisible ? 'Ocultar herramientas' : 'Mostrar herramientas'">
-    {{ toolbarVisible ? '✕' : '⚙️' }}
+  <!-- Floating open button — only visible when toolbar is hidden -->
+  <button class="btn-floating-toggle" *ngIf="!toolbarVisible"
+          (click)="toolbarVisible = true" title="Mostrar herramientas">
+    ⚙️
   </button>
 
   <div class="toolbar" [class.toolbar-hidden]="!toolbarVisible">
+    <button class="btn-close-toolbar" (click)="toolbarVisible = false" title="Ocultar herramientas">✕</button>
     <div class="tool-group">
       <span class="tool-label">Color</span>
       <input type="color" [(ngModel)]="currentColor">

@@ -41,7 +41,7 @@
                 (touchend)="stopDrawing()">
         </canvas>
         <div class="grid-overlay" [class.active]="showGrid"
-             [style.background-size]="(50 / zoomLevel) + 'px ' + (50 / zoomLevel) + 'px'"></div>
+             [style.background-image]="gridBackgroundImage"></div>
       </div>
     </div>
   </div>

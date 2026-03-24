@@ -176,9 +176,6 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
-  background-image:
-    linear-gradient(rgba(0,0,0,0.4) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.4) 1px, transparent 1px);
   background-size: 50px 50px;
 }
 

@@ -267,6 +267,14 @@ export class CanvasComponent implements OnInit {
     }
   }
 
+  get gridBackgroundImage(): string {
+    // Compensate line thickness so lines are always visible regardless of zoom.
+    // At zoom 0.5x a 2px line renders as 1 screen pixel; at zoom 0.1x a 10px line renders as 1 screen pixel.
+    const lw = Math.max(1, Math.ceil(1 / this.zoomLevel));
+    return `linear-gradient(rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px),
+            linear-gradient(90deg, rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px)`;
+  }
+
   public toggleGrid(): void {
     this.showGrid = !this.showGrid;
     // We don't clear the canvas because we don't want to lose drawings.

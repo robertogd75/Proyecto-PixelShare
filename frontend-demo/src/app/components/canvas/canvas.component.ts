@@ -1,14 +1,14 @@
 import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterModule, UrlSegment } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 
 @Component({
   selector: 'app-canvas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.css']
 })
@@ -43,7 +43,7 @@ export class CanvasComponent implements OnInit {
   }
 
   private handleRouting(): void {
-    this.route.url.subscribe(url => {
+    this.route.url.subscribe((url: UrlSegment[]) => {
       const path = url[0]?.path;
       if (path === 'global') {
         this.currentRoomId = 0;
@@ -66,16 +66,17 @@ export class CanvasComponent implements OnInit {
   }
 
   @HostListener('window:resize')
-  private resizeCanvas(): void {
+  public resizeCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
     const isGlobal = this.currentRoomId === 0;
     
-    // For Global/Rooms, make it "Enormous" by allowing overflow
     canvas.width = isGlobal ? 5000 : window.innerWidth * 0.95;
     canvas.height = isGlobal ? 5000 : window.innerHeight * 0.8;
     
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
+    if (this.ctx) {
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+    }
   }
 
   private loadInitialState(): void {
@@ -88,36 +89,35 @@ export class CanvasComponent implements OnInit {
 
   private setupWebSocket(): void {
     this.pixelService.connect().subscribe(pixel => {
-      // Filter incoming pixels by roomId
       if (pixel.roomId === this.currentRoomId) {
         this.drawPixelLocally(pixel);
       }
     });
   }
 
-  public startDrawing(event: MouseEvent | TouchEvent): void {
+  public startDrawing(event: any): void {
     this.isDrawing = true;
     this.draw(event);
   }
 
   public stopDrawing(): void {
     this.isDrawing = false;
-    this.ctx.beginPath();
+    if (this.ctx) this.ctx.beginPath();
   }
 
-  public draw(event: MouseEvent | TouchEvent): void {
+  public draw(event: any): void {
     if (!this.isDrawing) return;
 
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
     
-    let clientX, clientY;
-    if (event instanceof MouseEvent) {
-      clientX = event.clientX;
-      clientY = event.clientY;
-    } else {
+    let clientX: number, clientY: number;
+    if (event.touches) {
       clientX = event.touches[0].clientX;
       clientY = event.touches[0].clientY;
+    } else {
+      clientX = (event as MouseEvent).clientX;
+      clientY = (event as MouseEvent).clientY;
     }
 
     const x = clientX - rect.left;
@@ -133,7 +133,6 @@ export class CanvasComponent implements OnInit {
 
     this.drawPixelLocally(pixel);
     
-    // Only broadcast if not in private mode
     if (this.currentRoomId !== undefined) {
       this.pixelService.sendPixel(pixel);
     }

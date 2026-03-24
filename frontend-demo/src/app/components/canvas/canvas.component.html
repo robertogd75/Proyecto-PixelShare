@@ -13,8 +13,10 @@
       <div class="info-item">
         <span class="label">CÓDIGO</span>
         <span class="value code">{{ currentRoomCode }}</span>
-        <button class="btn-copy" (click)="$event.stopPropagation()">📋</button>
       </div>
+      <button class="btn-invite-pill" (click)="copyInviteUrl()">
+        <span>🔗 Copiar Invitación</span>
+      </button>
     </div>
   </div>
 

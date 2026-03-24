@@ -101,6 +101,23 @@ export class CanvasComponent implements OnInit {
     });
   }
 
+  @HostListener('wheel', ['$event'])
+  onWheel(event: WheelEvent) {
+    if (event.ctrlKey) {
+      event.preventDefault(); // Prevent browser zoom
+      const delta = event.deltaY > 0 ? -0.1 : 0.1;
+      this.zoomLevel = Math.min(Math.max(0.1, this.zoomLevel + delta), 2.0);
+    }
+  }
+
+  public copyInviteUrl(): void {
+    if (!this.currentRoomCode) return;
+    const url = window.location.origin + '/room/' + this.currentRoomCode;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('¡Enlace de invitación copiado al portapapeles!');
+    });
+  }
+
   public startDrawing(event: any): void {
     this.isDrawing = true;
     this.draw(event);

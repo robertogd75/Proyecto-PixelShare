@@ -28,16 +28,30 @@ import { PixelService } from '../../services/pixel.service';
         <h2>{{ modalTitle }}</h2>
         <p>{{ modalDescription }}</p>
         
-        <div class="form-group">
-          <label *ngIf="modalMode === 'create'">Nombre de la sala</label>
-          <input type="text" [(ngModel)]="roomName" placeholder="Escribe el nombre..." *ngIf="modalMode === 'create'" autofocus>
+          <div class="form-group" *ngIf="modalMode === 'create'">
+            <label>Nombre de la sala</label>
+            <input type="text" [(ngModel)]="roomName" placeholder="Escribe el nombre..." autofocus>
+          </div>
           
-          <label *ngIf="modalMode === 'join'">Código de la sala</label>
-          <input type="text" [(ngModel)]="roomCode" placeholder="AAAA-BBBB-CCCC" *ngIf="modalMode === 'join'" autofocus>
+          <div class="form-group" *ngIf="modalMode === 'join'">
+            <label>Código de la sala</label>
+            <input type="text" [(ngModel)]="roomCode" placeholder="AAAA-BBBB-CCCC" autofocus>
+          </div>
+
+          <!-- Success State -->
+          <div class="success-content" *ngIf="modalMode === 'success'">
+            <div class="code-display">
+              <label>Código de Acceso</label>
+              <div class="code-value">{{ inviteCode }}</div>
+            </div>
+            <button class="btn-copy-full" (click)="copyInvitation()">
+              <span>📋 Copiar Enlace de Invitación</span>
+            </button>
+          </div>
         </div>
 
         <div class="modal-footer">
-          <button class="btn-cancel" (click)="closeModal()">Cancelar</button>
+          <button class="btn-cancel" (click)="closeModal()" *ngIf="modalMode !== 'success'">Cancelar</button>
           <button class="btn-submit" (click)="submitModal()" [disabled]="(modalMode === 'create' && !roomName) || (modalMode === 'join' && !roomCode)">
             {{ modalActionText }}
           </button>
@@ -118,21 +132,64 @@ import { PixelService } from '../../services/pixel.service';
     .btn-cancel { background: #f5f5f5; color: #666; }
     .btn-submit { background: #000; color: #fff; }
     .btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Success State Styles */
+    .success-content {
+      text-align: center;
+      padding: 10px 0;
+    }
+    .code-display {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      border: 2px dashed #ddd;
+    }
+    .code-value {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #000;
+      letter-spacing: 2px;
+      margin-top: 10px;
+    }
+    .btn-copy-full {
+      width: 100%;
+      background: #000;
+      color: #fff;
+      padding: 15px;
+      border-radius: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.2s;
+    }
+    .btn-copy-full:hover { transform: translateY(-2px); }
   `]
 })
 export class NavbarComponent {
   showModal = false;
-  modalMode: 'join' | 'create' = 'create';
+  modalMode: 'join' | 'create' | 'success' = 'create';
   roomName = '';
   roomCode = '';
+  inviteCode = '';
 
-  get modalTitle() { return this.modalMode === 'create' ? 'Crear Nueva Sala' : 'Unirse a Sala'; }
+  get modalTitle() { 
+    if (this.modalMode === 'success') return '¡Sala Creada con Éxito!';
+    return this.modalMode === 'create' ? 'Crear Nueva Sala' : 'Unirse a Sala'; 
+  }
   get modalDescription() { 
+    if (this.modalMode === 'success') return 'Comparte el código o el enlace con tus amigos para empezar a pintar juntos.';
     return this.modalMode === 'create' 
       ? 'Crea un espacio privado para pintar con tus amigos.' 
       : 'Escribe el código de la sala para entrar.';
   }
-  get modalActionText() { return this.modalMode === 'create' ? 'Crear Sala' : 'Entrar'; }
+  get modalActionText() { 
+    if (this.modalMode === 'success') return 'Ir a la Sala';
+    return this.modalMode === 'create' ? 'Crear Sala' : 'Entrar'; 
+  }
 
   constructor(private router: Router, private pixelService: PixelService) {}
 
@@ -149,6 +206,9 @@ export class NavbarComponent {
   }
 
   closeModal() {
+    if (this.modalMode === 'success') {
+      this.router.navigateByUrl(`/room/${this.inviteCode}`);
+    }
     this.showModal = false;
   }
 
@@ -158,19 +218,28 @@ export class NavbarComponent {
         this.router.navigateByUrl(`/room/${this.roomCode.toUpperCase().trim()}`);
         this.closeModal();
       }
-    } else {
+    } else if (this.modalMode === 'create') {
       if (this.roomName) {
         const code = this.generateSecureCode();
         this.pixelService.createRoom({ code, name: this.roomName }).subscribe(room => {
-          this.router.navigateByUrl(`/room/${room.code}`);
-          this.closeModal();
+          this.inviteCode = room.code;
+          this.modalMode = 'success';
         });
       }
+    } else {
+      this.closeModal();
     }
   }
 
+  copyInvitation() {
+    const url = window.location.origin + '/room/' + this.inviteCode;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('¡Enlace de invitación copiado al portapapeles!');
+    });
+  }
+
   private generateSecureCode(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 for clarity
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let result = '';
     for (let i = 0; i < 12; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));

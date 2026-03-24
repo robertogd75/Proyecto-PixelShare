@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { ToastService } from '../../services/toast.service';
+import { ThemeService } from '../../services/theme.service';
 import { finalize, timeout } from 'rxjs';
 
 @Component({
@@ -19,6 +20,9 @@ import { finalize, timeout } from 'rxjs';
 
       <div class="nav-links">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
+        <button (click)="toggleTheme()" class="nav-btn theme-toggle" [attr.aria-label]="isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'">
+          <span>{{ isDarkMode ? '☀️' : '🌙' }}</span>
+        </button>
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
         <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
       </div>
@@ -81,10 +85,10 @@ import { finalize, timeout } from 'rxjs';
       justify-content: space-between;
       align-items: center;
       padding: 0 40px;
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--navbar-bg);
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid var(--border-soft);
       position: sticky;
       top: 0;
       z-index: 1000;
@@ -100,7 +104,7 @@ import { finalize, timeout } from 'rxjs';
     .logo-pixel {
       width: 24px;
       height: 24px;
-      background: #000;
+      background: var(--text-main);
       border-radius: 6px;
       box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
     }
@@ -109,7 +113,7 @@ import { finalize, timeout } from 'rxjs';
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: -1px;
-      color: #000;
+      color: var(--text-main);
     }
 
     .nav-links {
@@ -120,7 +124,7 @@ import { finalize, timeout } from 'rxjs';
 
     .nav-link {
       text-decoration: none;
-      color: #666;
+      color: var(--text-soft);
       font-weight: 600;
       font-size: 0.95rem;
       padding: 8px 15px;
@@ -129,8 +133,8 @@ import { finalize, timeout } from 'rxjs';
     }
 
     .nav-link:hover, .nav-link.active {
-      color: #000;
-      background: rgba(0, 0, 0, 0.03);
+      color: var(--text-main);
+      background: var(--panel-muted);
     }
 
     .nav-btn {
@@ -143,8 +147,17 @@ import { finalize, timeout } from 'rxjs';
       transition: all 0.2s;
     }
 
-    .nav-btn.primary { background: #000; color: #fff; }
-    .nav-btn.secondary { background: #f0f0f0; color: #333; }
+    .nav-btn.primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
+    .nav-btn.secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-text); }
+    .nav-btn.theme-toggle {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 1.05rem;
+      background: var(--panel-muted);
+      color: var(--text-main);
+    }
     .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
     /* Modal Styles */
@@ -154,7 +167,7 @@ import { finalize, timeout } from 'rxjs';
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--overlay-bg);
       backdrop-filter: blur(8px);
       display: flex;
       justify-content: center;
@@ -164,7 +177,7 @@ import { finalize, timeout } from 'rxjs';
     }
 
     .modal-content {
-      background: white;
+      background: var(--panel-solid);
       width: 100%;
       max-width: 450px;
       border-radius: 24px;
@@ -183,41 +196,41 @@ import { finalize, timeout } from 'rxjs';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--border-soft);
     }
 
     .modal-header h2 { font-size: 1.25rem; font-weight: 800; margin: 0; }
-    .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+    .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-soft); }
 
     .modal-body { padding: 30px; }
-    .description { color: #666; margin-bottom: 25px; line-height: 1.5; }
+    .description { color: var(--text-soft); margin-bottom: 25px; line-height: 1.5; }
 
     .form-group { margin-bottom: 25px; }
-    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #f0f0f0; font-size: 1rem; font-weight: 600; transition: all 0.2s; }
-    .form-group input:focus { outline: none; border-color: #000; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid var(--border-soft); font-size: 1rem; font-weight: 600; transition: all 0.2s; background: var(--input-bg); color: var(--text-main); }
+    .form-group input:focus { outline: none; border-color: var(--text-main); }
 
     .modal-footer { display: flex; gap: 15px; margin-top: 10px; }
     .btn-cancel, .btn-submit { flex: 1; padding: 14px; border-radius: 14px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
-    .btn-cancel { background: #f8f8f8; color: #666; }
-    .btn-submit { background: #000; color: #fff; }
+    .btn-cancel { background: var(--panel-muted); color: var(--text-soft); }
+    .btn-submit { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* Success State Styles */
     .success-content {
-      background: #fcfcfc;
-      border: 1px solid #f0f0f0;
+      background: var(--panel-muted);
+      border: 1px solid var(--border-soft);
       border-radius: 20px;
       padding: 20px;
       margin-bottom: 25px;
       text-align: center;
     }
     .code-display { margin-bottom: 20px; }
-    .code-display label { font-size: 0.75rem; font-weight: 800; color: #aaa; text-transform: uppercase; }
+    .code-display label { font-size: 0.75rem; font-weight: 800; color: var(--text-soft); text-transform: uppercase; }
     .code-value {
       font-size: 2rem;
       font-weight: 900;
-      color: #000;
+      color: var(--text-main);
       letter-spacing: 2px;
       margin-top: 5px;
     }
@@ -236,8 +249,8 @@ import { finalize, timeout } from 'rxjs';
       gap: 6px;
       transition: all 0.2s;
     }
-    .btn-copy-code { background: #fff; border: 1px solid #eee; color: #333; }
-    .btn-copy-link { background: #000; color: #fff; }
+    .btn-copy-code { background: var(--panel-solid); border: 1px solid var(--border-soft); color: var(--text-main); }
+    .btn-copy-link { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
     .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
     /* ================================================
@@ -312,8 +325,17 @@ export class NavbarComponent {
     private router: Router,
     private pixelService: PixelService,
     private toastService: ToastService,
+    private themeService: ThemeService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  get isDarkMode(): boolean {
+    return this.themeService.currentTheme === 'dark';
+  }
+
+  toggleTheme() {
+    this.themeService.toggleTheme();
+  }
 
   get modalTitle(): string {
     if (this.modalMode === 'success') return '¡Sala Creada!';

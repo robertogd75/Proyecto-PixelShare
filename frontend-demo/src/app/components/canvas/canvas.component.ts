@@ -1,10 +1,12 @@
-import { Component, AfterViewInit, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, AfterViewInit, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 import { ToastService } from '../../services/toast.service';
+import { ThemeService } from '../../services/theme.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-canvas',
@@ -13,7 +15,7 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.css']
 })
-export class CanvasComponent implements OnInit, AfterViewInit {
+export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -31,21 +33,33 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public isHostClosed = false;
   public showGrid = false;
   public isRoomHost = false;
+  public isDarkMode = false;
   public canvasWidth = 2828;  // A4 landscape: width = height * √2
   public canvasHeight = 2000;
   private lastPos: { x: number, y: number } | null = null;
+  private themeSubscription?: Subscription;
 
   constructor(
     private pixelService: PixelService,
     private route: ActivatedRoute,
     private router: Router,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private themeService: ThemeService
   ) {}
 
   ngOnInit(): void {
+    this.isDarkMode = this.themeService.currentTheme === 'dark';
+    this.themeSubscription = this.themeService.theme$.subscribe(theme => {
+      this.isDarkMode = theme === 'dark';
+    });
+
     this.initCanvas();
     this.setupBackNavigationGuard();
     this.handleRouting();
+  }
+
+  ngOnDestroy(): void {
+    this.themeSubscription?.unsubscribe();
   }
 
   ngAfterViewInit(): void {
@@ -314,8 +328,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     // Compensate line thickness so lines are always visible regardless of zoom.
     // At zoom 0.5x a 2px line renders as 1 screen pixel; at zoom 0.1x a 10px line renders as 1 screen pixel.
     const lw = Math.max(1, Math.ceil(1 / this.zoomLevel));
-    return `linear-gradient(rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px),
-            linear-gradient(90deg, rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px)`;
+      const gridColor = this.isDarkMode ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.5)';
+      return `linear-gradient(${gridColor} ${lw}px, transparent ${lw}px),
+        linear-gradient(90deg, ${gridColor} ${lw}px, transparent ${lw}px)`;
   }
 
   public toggleGrid(): void {
@@ -400,6 +415,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.showBackConfirm = false;
     this.allowNextBackNavigation = true;
     this.hasUnsavedChanges = false;
-    window.history.back();
+    window.history.go(-2);
   }
 }

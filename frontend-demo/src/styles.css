@@ -1,15 +1,54 @@
 /* You can add global styles to this file, and also import other style files */
 
+:root {
+  --app-bg: #f0f2f5;
+  --text-main: #111111;
+  --text-soft: #666666;
+  --panel-solid: #ffffff;
+  --panel-muted: #f3f4f6;
+  --border-soft: rgba(0, 0, 0, 0.1);
+  --overlay-bg: rgba(0, 0, 0, 0.4);
+  --navbar-bg: rgba(255, 255, 255, 0.85);
+  --canvas-viewport-bg: #343a40;
+  --canvas-viewport-border: #222222;
+  --btn-primary-bg: #000000;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: #f0f0f0;
+  --btn-secondary-text: #333333;
+  --input-bg: #ffffff;
+}
+
+body.theme-dark {
+  --app-bg: #0f1115;
+  --text-main: #f5f7fa;
+  --text-soft: #a8b0bd;
+  --panel-solid: #1a1e26;
+  --panel-muted: #252b36;
+  --border-soft: rgba(255, 255, 255, 0.14);
+  --overlay-bg: rgba(0, 0, 0, 0.55);
+  --navbar-bg: rgba(20, 23, 30, 0.82);
+  --canvas-viewport-bg: #07090d;
+  --canvas-viewport-border: #3e4655;
+  --btn-primary-bg: #f5f7fa;
+  --btn-primary-text: #111111;
+  --btn-secondary-bg: #2b3340;
+  --btn-secondary-text: #e8edf5;
+  --input-bg: #0f131a;
+}
+
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background: var(--app-bg);
+  color: var(--text-main);
   /* Prevent text selection during drawing on touch */
   -webkit-user-select: none;
   user-select: none;
   /* Smooth tap on iOS */
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 app-root {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -252,7 +252,8 @@ export class NavbarComponent {
   constructor(
     private router: Router, 
     private pixelService: PixelService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   get modalTitle(): string { 
@@ -302,7 +303,10 @@ export class NavbarComponent {
         this.pixelService.createRoom({ code, name: this.roomName })
           .pipe(
             timeout(10000),
-            finalize(() => this.isCreating = false)
+            finalize(() => {
+              this.isCreating = false;
+              this.cdr.detectChanges();
+            })
           )
           .subscribe({
             next: room => {
@@ -313,6 +317,7 @@ export class NavbarComponent {
               } else {
                 this.toastService.error('Error: Respuesta del servidor inválida.');
               }
+              this.cdr.detectChanges();
             },
             error: (err) => {
               console.error('Room creation error:', err);
@@ -320,6 +325,7 @@ export class NavbarComponent {
                 ? 'El servidor tardó demasiado en responder.' 
                 : 'Hubo un error al crear la sala.';
               this.toastService.error(errMsg);
+              this.cdr.detectChanges();
             }
           });
       }

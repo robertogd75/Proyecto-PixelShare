@@ -5,6 +5,11 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  /* Prevent text selection during drawing on touch */
+  -webkit-user-select: none;
+  user-select: none;
+  /* Smooth tap on iOS */
+  -webkit-tap-highlight-color: transparent;
 }
 
 app-root {

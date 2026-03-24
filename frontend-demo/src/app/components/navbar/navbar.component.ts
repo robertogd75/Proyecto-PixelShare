@@ -239,6 +239,65 @@ import { finalize, timeout } from 'rxjs';
     .btn-copy-code { background: #fff; border: 1px solid #eee; color: #333; }
     .btn-copy-link { background: #000; color: #fff; }
     .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+    /* ================================================
+       RESPONSIVE — TABLET (769px – 1024px)
+       ================================================ */
+    @media (max-width: 1024px) {
+      .glass-navbar { padding: 0 20px; }
+      .logo-text { font-size: 1.2rem; }
+      .nav-link { font-size: 0.88rem; padding: 7px 10px; }
+      .nav-btn { padding: 9px 14px; font-size: 0.85rem; }
+    }
+
+    /* ================================================
+       RESPONSIVE — MOBILE (≤ 768px)
+       ================================================ */
+    @media (max-width: 768px) {
+      .glass-navbar {
+        height: 58px;
+        padding: 0 14px;
+      }
+
+      .logo-text { font-size: 1.1rem; }
+      .logo-pixel { width: 20px; height: 20px; }
+
+      /* Hide text nav link on mobile to save space */
+      .nav-link { display: none; }
+
+      .nav-links { gap: 8px; }
+
+      .nav-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        border-radius: 10px;
+      }
+
+      /* Modal full-width on mobile */
+      .modal-overlay { padding: 12px; align-items: flex-end; }
+
+      .modal-content {
+        border-radius: 20px 20px 16px 16px;
+        max-width: 100%;
+      }
+
+      .modal-header { padding: 18px 20px; }
+      .modal-header h2 { font-size: 1.1rem; }
+
+      .modal-body { padding: 20px; }
+
+      .code-value { font-size: 1.5rem; letter-spacing: 1px; }
+
+      .success-actions { flex-direction: column; }
+      .btn-copy-code, .btn-copy-link { padding: 13px; }
+
+      .modal-footer { flex-direction: column; gap: 10px; }
+      .btn-cancel, .btn-submit { padding: 13px; font-size: 0.95rem; }
+    }
+
+    @media (max-width: 400px) {
+      .nav-btn.secondary { display: none; }
+    }
   `]
 })
 export class NavbarComponent {

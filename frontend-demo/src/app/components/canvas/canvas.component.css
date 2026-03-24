@@ -441,3 +441,146 @@ input:checked + .slider:before { transform: translateX(14px); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes loadProgress { from { width: 0%; } to { width: 100%; } }
+
+/* ================================================
+   RESPONSIVE — TABLET (769px – 1024px)
+   ================================================ */
+@media (max-width: 1024px) {
+  .canvas-header {
+    padding-top: 78px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .room-info-badge {
+    gap: 16px;
+    padding: 8px 16px;
+  }
+
+  .info-group {
+    gap: 14px;
+    padding-right: 14px;
+  }
+
+  .btn-invite-pill {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+
+  .toolbar {
+    gap: 18px;
+    padding: 13px 22px;
+  }
+
+  input[type="range"] { width: 95px; }
+}
+
+/* ================================================
+   RESPONSIVE — MOBILE (≤ 768px)
+   ================================================ */
+@media (max-width: 768px) {
+
+  /* Header stacks vertically */
+  .canvas-header {
+    padding-top: 70px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-bottom: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .canvas-header h2 {
+    font-size: 1.15rem;
+  }
+
+  /* Room badge becomes vertical column */
+  .room-info-badge {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .info-group {
+    flex-direction: row;
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+    gap: 20px;
+  }
+
+  .invite-actions {
+    gap: 8px;
+  }
+
+  .btn-invite-pill {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 8px;
+    font-size: 0.75rem;
+    border-radius: 10px;
+  }
+
+  /* Toolbar: scrollable horizontal pill */
+  .toolbar {
+    bottom: 16px;
+    padding: 11px 14px;
+    gap: 14px;
+    max-width: calc(100vw - 80px);
+    overflow-x: auto;
+    border-radius: 28px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .toolbar::-webkit-scrollbar { display: none; }
+
+  input[type="range"] { width: 75px; }
+
+  .tool-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.4px;
+  }
+
+  .tool-value { font-size: 0.8rem; min-width: 36px; }
+
+  .btn-clear {
+    padding: 8px 15px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  input[type="color"] {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Floating open button */
+  .btn-floating-toggle {
+    bottom: 16px;
+    left: 14px;
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+
+  /* Overlays adapt to small screens */
+  .confirm-card {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+
+  .host-closed-card {
+    padding: 28px 22px;
+    border-radius: 22px;
+    margin: 0 16px;
+  }
+
+  .host-closed-card h1 { font-size: 1.4rem; }
+}

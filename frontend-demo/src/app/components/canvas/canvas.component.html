@@ -30,17 +30,18 @@
 
   <div class="canvas-viewport" #viewport>
     <div class="panning-container">
-      <canvas #canvasElement 
-              [style.transform]="'scale(' + zoomLevel + ')'"
-              [class.show-grid]="showGrid"
-              (mousedown)="startDrawing($event)" 
-              (mousemove)="draw($event)" 
-              (mouseup)="stopDrawing()" 
-              (mouseleave)="stopDrawing()"
-              (touchstart)="startDrawing($event)"
-              (touchmove)="draw($event)"
-              (touchend)="stopDrawing()">
-      </canvas>
+      <div class="canvas-wrapper" [style.transform]="'scale(' + zoomLevel + ')'">
+        <canvas #canvasElement 
+                (mousedown)="startDrawing($event)" 
+                (mousemove)="draw($event)" 
+                (mouseup)="stopDrawing()" 
+                (mouseleave)="stopDrawing()"
+                (touchstart)="startDrawing($event)"
+                (touchmove)="draw($event)"
+                (touchend)="stopDrawing()">
+        </canvas>
+        <div class="grid-overlay" [class.active]="showGrid"></div>
+      </div>
     </div>
   </div>
 
@@ -60,6 +61,16 @@
       <span class="tool-label">Zoom</span>
       <input type="range" min="0.1" max="2" step="0.1" [(ngModel)]="zoomLevel">
       <span class="tool-value">{{ (zoomLevel * 100).toFixed(0) }}%</span>
+    </div>
+
+    <div class="tool-group size-group" *ngIf="!currentRoomId">
+      <span class="tool-label">Tamaño</span>
+      <select (change)="changeCanvasSize($any($event.target).value)" class="nav-select">
+        <option value="small">Pequeño</option>
+        <option value="normal" selected>Normal</option>
+        <option value="large">Grande</option>
+        <option value="huge">Enorme</option>
+      </select>
     </div>
 
     <div class="tool-group grid-toggle">

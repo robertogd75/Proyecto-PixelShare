@@ -29,6 +29,8 @@ export class CanvasComponent implements OnInit {
   public currentRoomCode = '';
   public isHostClosed = false;
   public showGrid = false;
+  public canvasWidth = 2000; // Default
+  public canvasHeight = 2000;
   private lastPos: { x: number, y: number } | null = null;
 
   constructor(
@@ -82,16 +84,44 @@ export class CanvasComponent implements OnInit {
   @HostListener('window:resize')
   public resizeCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
-    const isGlobalOrRoom = this.currentRoomId !== undefined;
+    const isRoom = this.currentRoomId !== undefined;
     
-    // Always use large canvas if in a room or global
-    canvas.width = isGlobalOrRoom ? 5000 : window.innerWidth * 0.95;
-    canvas.height = isGlobalOrRoom ? 5000 : window.innerHeight * 0.8;
-    
+    // For rooms, we use fixed large dimensions. For private, we use user-selected or default.
+    const targetWidth = isRoom ? 5000 : this.canvasWidth;
+    const targetHeight = isRoom ? 5000 : this.canvasHeight;
+
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      this.reinitCanvasSettings();
+    }
+  }
+
+  private reinitCanvasSettings(): void {
     if (this.ctx) {
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
+      // Fill background again since resizing clears it
+      this.ctx.fillStyle = 'white';
+      this.ctx.fillRect(0, 0, this.canvasRef.nativeElement.width, this.canvasRef.nativeElement.height);
     }
+  }
+
+  public changeCanvasSize(size: string): void {
+    if (this.currentRoomId !== undefined) {
+      this.toastService.info('En las salas el tamaño es fijo (5000x5000).');
+      return;
+    }
+
+    switch(size) {
+      case 'small': this.canvasWidth = 1000; this.canvasHeight = 800; break;
+      case 'normal': this.canvasWidth = 2000; this.canvasHeight = 2000; break;
+      case 'large': this.canvasWidth = 3000; this.canvasHeight = 3000; break;
+      case 'huge': this.canvasWidth = 5000; this.canvasHeight = 5000; break;
+    }
+    
+    this.resizeCanvas();
+    this.toastService.success(`Tamaño cambiado a ${size}`);
   }
 
   private loadInitialState(): void {

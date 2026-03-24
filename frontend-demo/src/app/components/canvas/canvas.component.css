@@ -163,15 +163,40 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.btn-clear:hover { background: #ff6b81; transform: scale(1.05); }
+/* Grid Overlay Fix */
+.canvas-wrapper {
+  position: relative;
+  display: inline-block;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
 
-/* Grid Styles */
-canvas.show-grid {
+.grid-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
   background-image: 
-    linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+    linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
   background-size: 50px 50px;
 }
+
+.grid-overlay.active {
+  opacity: 1;
+}
+
+/* Size Menu Styles */
+.nav-select {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+.nav-select:hover { border-color: #000; }
 
 /* Switch UI */
 .grid-toggle { gap: 8px !important; }

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, throwError, timeout } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { Pixel } from '../models/pixel.model';
 
@@ -8,6 +8,8 @@ import { Pixel } from '../models/pixel.model';
     providedIn: 'root'
 })
 export class PixelService {
+    private readonly primaryRequestTimeoutMs = 3500;
+    private readonly fallbackRequestTimeoutMs = 6000;
     private readonly apiUrl = '/api/pixels';
     private readonly roomsApiUrl = '/api/rooms';
     private readonly directApiBase = `${window.location.protocol}//${window.location.hostname}:8083/api`;
@@ -25,7 +27,11 @@ export class PixelService {
             : `${this.directApiBase}/pixels`;
 
         return this.http.get<Pixel[]>(url).pipe(
-            catchError(error => this.tryHttpFallback(error, () => this.http.get<Pixel[]>(fallbackUrl)))
+            timeout(this.primaryRequestTimeoutMs),
+            catchError(error => this.tryHttpFallback(
+                error,
+                () => this.http.get<Pixel[]>(fallbackUrl).pipe(timeout(this.fallbackRequestTimeoutMs))
+            ))
         );
     }
 
@@ -34,7 +40,11 @@ export class PixelService {
         const fallbackUrl = `${this.directApiBase}/rooms/${code}`;
 
         return this.http.get<any>(proxyUrl).pipe(
-            catchError(error => this.tryHttpFallback(error, () => this.http.get<any>(fallbackUrl)))
+            timeout(this.primaryRequestTimeoutMs),
+            catchError(error => this.tryHttpFallback(
+                error,
+                () => this.http.get<any>(fallbackUrl).pipe(timeout(this.fallbackRequestTimeoutMs))
+            ))
         );
     }
 
@@ -42,7 +52,11 @@ export class PixelService {
         const fallbackUrl = `${this.directApiBase}/rooms`;
 
         return this.http.post<any>(this.roomsApiUrl, room).pipe(
-            catchError(error => this.tryHttpFallback(error, () => this.http.post<any>(fallbackUrl, room)))
+            timeout(this.primaryRequestTimeoutMs),
+            catchError(error => this.tryHttpFallback(
+                error,
+                () => this.http.post<any>(fallbackUrl, room).pipe(timeout(this.fallbackRequestTimeoutMs))
+            ))
         );
     }
 
@@ -82,6 +96,6 @@ export class PixelService {
 
     private shouldUseDirectFallback(error: any): boolean {
         const status = error?.status;
-        return status === 0 || status === 502 || status === 503 || status === 504;
+        return error?.name === 'TimeoutError' || status === 0 || status === 502 || status === 503 || status === 504;
     }
 }

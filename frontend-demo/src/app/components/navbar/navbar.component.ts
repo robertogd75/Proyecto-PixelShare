@@ -5,7 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { ToastService } from '../../services/toast.service';
 import { ThemeService } from '../../services/theme.service';
-import { finalize, timeout } from 'rxjs';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -413,7 +413,6 @@ export class NavbarComponent {
         const code = this.generateSecureCode();
         this.pixelService.createRoom({ code, name: this.roomName })
           .pipe(
-            timeout(10000),
             finalize(() => {
               this.isCreating = false;
               this.cdr.detectChanges();

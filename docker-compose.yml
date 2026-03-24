@@ -4,7 +4,7 @@ services:
     expose:
       - "8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/pixeldb?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://100.78.127.64:3306/pixeldb?createDatabaseIfNotExist=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=rgardelserver75
     extra_hosts:

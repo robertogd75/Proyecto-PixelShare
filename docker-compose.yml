@@ -1,14 +1,12 @@
 services:
   backend:
     build: .
-    expose:
-      - "8080"
+    network_mode: host
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://100.78.127.64:3306/pixeldb?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/pixeldb?createDatabaseIfNotExist=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=rgardelserver75
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - SERVER_PORT=8083
 
   frontend:
     build: ./frontend-demo
@@ -16,3 +14,4 @@ services:
       - "8888:80"
     depends_on:
       - backend
+    # Note: frontend nginx.conf needs to point to localhost:8083

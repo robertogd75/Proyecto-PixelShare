@@ -12,7 +12,7 @@ export class PixelService {
     private readonly fallbackRequestTimeoutMs = 6000;
     private readonly apiUrl = '/api/pixels';
     private readonly roomsApiUrl = '/api/rooms';
-    private readonly directApiBase = `${window.location.protocol}//${window.location.hostname}:8083/api`;
+    private readonly directApiBases = this.buildDirectApiBases();
     private readonly wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     private readonly baseWsUrl = `${this.wsProtocol}://${window.location.host}/ws-pixels`;
     private readonly directWsBaseUrl = `${this.wsProtocol}://${window.location.hostname}:8083/ws-pixels`;
@@ -22,40 +22,49 @@ export class PixelService {
 
     getPixels(roomId?: number): Observable<Pixel[]> {
         const url = roomId !== undefined ? `${this.apiUrl}?roomId=${roomId}` : this.apiUrl;
-        const fallbackUrl = roomId !== undefined
-            ? `${this.directApiBase}/pixels?roomId=${roomId}`
-            : `${this.directApiBase}/pixels`;
+        const fallbackRequests = this.directApiBases.map(base => () => {
+            const fallbackUrl = roomId !== undefined
+                ? `${base}/pixels?roomId=${roomId}`
+                : `${base}/pixels`;
+            return this.http.get<Pixel[]>(fallbackUrl).pipe(timeout(this.fallbackRequestTimeoutMs));
+        });
 
         return this.http.get<Pixel[]>(url).pipe(
             timeout(this.primaryRequestTimeoutMs),
             catchError(error => this.tryHttpFallback(
                 error,
-                () => this.http.get<Pixel[]>(fallbackUrl).pipe(timeout(this.fallbackRequestTimeoutMs))
+                () => this.runSequential(fallbackRequests)
             ))
         );
     }
 
     getRoom(code: string): Observable<any> {
         const proxyUrl = `${this.roomsApiUrl}/${code}`;
-        const fallbackUrl = `${this.directApiBase}/rooms/${code}`;
+        const fallbackRequests = this.directApiBases.map(base => () => {
+            const fallbackUrl = `${base}/rooms/${code}`;
+            return this.http.get<any>(fallbackUrl).pipe(timeout(this.fallbackRequestTimeoutMs));
+        });
 
         return this.http.get<any>(proxyUrl).pipe(
             timeout(this.primaryRequestTimeoutMs),
             catchError(error => this.tryHttpFallback(
                 error,
-                () => this.http.get<any>(fallbackUrl).pipe(timeout(this.fallbackRequestTimeoutMs))
+                () => this.runSequential(fallbackRequests)
             ))
         );
     }
 
     createRoom(room: any): Observable<any> {
-        const fallbackUrl = `${this.directApiBase}/rooms`;
+        const fallbackRequests = this.directApiBases.map(base => () => {
+            const fallbackUrl = `${base}/rooms`;
+            return this.http.post<any>(fallbackUrl, room).pipe(timeout(this.fallbackRequestTimeoutMs));
+        });
 
         return this.http.post<any>(this.roomsApiUrl, room).pipe(
             timeout(this.primaryRequestTimeoutMs),
             catchError(error => this.tryHttpFallback(
                 error,
-                () => this.http.post<any>(fallbackUrl, room).pipe(timeout(this.fallbackRequestTimeoutMs))
+                () => this.runSequential(fallbackRequests)
             ))
         );
     }
@@ -97,5 +106,31 @@ export class PixelService {
     private shouldUseDirectFallback(error: any): boolean {
         const status = error?.status;
         return error?.name === 'TimeoutError' || status === 0 || status === 502 || status === 503 || status === 504;
+    }
+
+    private runSequential<T>(requests: Array<() => Observable<T>>): Observable<T> {
+        const [currentRequest, ...remaining] = requests;
+
+        if (!currentRequest) {
+            return throwError(() => new Error('No hay endpoints de fallback disponibles.'));
+        }
+
+        return currentRequest().pipe(
+            catchError(error => {
+                if (!this.shouldUseDirectFallback(error) || remaining.length === 0) {
+                    return throwError(() => error);
+                }
+                return this.runSequential(remaining);
+            })
+        );
+    }
+
+    private buildDirectApiBases(): string[] {
+        const protocol = window.location.protocol;
+        const candidates = [window.location.hostname, 'localhost', '127.0.0.1']
+            .filter(Boolean)
+            .map(host => `${protocol}//${host}:8083/api`);
+
+        return Array.from(new Set(candidates));
     }
 }

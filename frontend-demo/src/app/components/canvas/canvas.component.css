@@ -1,0 +1,16 @@
+.canvas-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #dee2e6;
+    cursor: crosshair;
+}
+
+canvas {
+    display: block;
+    background: #ffffff;
+}
+
+.form-control-color {
+    width: 60px;
+}

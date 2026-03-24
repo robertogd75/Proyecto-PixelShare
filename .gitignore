@@ -1,0 +1,20 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+
+# Angular
+node_modules/
+dist/
+.angular/
+.vscode/
+
+# Environment
+.env
+application-local.properties
+
+# OS
+.DS_Store
+Thumbs.db

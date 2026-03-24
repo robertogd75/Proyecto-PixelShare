@@ -3,16 +3,14 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      - MYSQL_DATABASE=pixeldb
-      - MYSQL_USER=pixelshare
-      - MYSQL_PASSWORD=pixelshare123
-      - MYSQL_ROOT_PASSWORD=root123
-    ports:
-      - "3306:3306"
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-pixeldb}
+      - MYSQL_USER=${MYSQL_USER:-pixelshare}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-change_me_db_password}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-change_me_root_password}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot123"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-change_me_root_password}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -27,8 +25,8 @@ services:
       - "8083:8083"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/pixeldb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=pixelshare
-      - SPRING_DATASOURCE_PASSWORD=pixelshare123
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER:-pixelshare}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD:-change_me_db_password}
       - SERVER_PORT=8083
 
   frontend:

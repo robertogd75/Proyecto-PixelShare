@@ -8,14 +8,14 @@ import { Pixel } from '../models/pixel.model';
     providedIn: 'root'
 })
 export class PixelService {
-    private readonly primaryRequestTimeoutMs = 3500;
-    private readonly fallbackRequestTimeoutMs = 6000;
+    private readonly primaryRequestTimeoutMs = 12000;
+    private readonly fallbackRequestTimeoutMs = 8000;
     private readonly apiUrl = '/api/pixels';
     private readonly roomsApiUrl = '/api/rooms';
     private readonly directApiBases = this.buildDirectApiBases();
     private readonly wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     private readonly baseWsUrl = `${this.wsProtocol}://${window.location.host}/ws-pixels`;
-    private readonly directWsBaseUrl = `${this.wsProtocol}://${window.location.hostname}:8083/ws-pixels`;
+    private readonly directWsBases = this.buildDirectWsBases();
     private socket$: WebSocketSubject<Pixel> | null = null;
 
     constructor(private http: HttpClient) {}
@@ -76,7 +76,14 @@ export class PixelService {
         }
 
         const primaryUrl = roomId !== undefined ? `${this.baseWsUrl}?roomId=${roomId}` : this.baseWsUrl;
-        const fallbackUrl = roomId !== undefined ? `${this.directWsBaseUrl}?roomId=${roomId}` : this.directWsBaseUrl;
+
+        const fallbackStreams = this.directWsBases.map(base => {
+            const fallbackUrl = roomId !== undefined ? `${base}?roomId=${roomId}` : base;
+            return () => {
+                this.socket$ = webSocket(fallbackUrl);
+                return this.socket$.asObservable();
+            };
+        });
 
         this.socket$ = webSocket(primaryUrl);
 
@@ -85,9 +92,7 @@ export class PixelService {
                 if (!this.shouldUseDirectFallback(error)) {
                     return throwError(() => error);
                 }
-
-                this.socket$ = webSocket(fallbackUrl);
-                return this.socket$.asObservable();
+                return this.runSequential(fallbackStreams);
             })
         );
     }
@@ -127,9 +132,31 @@ export class PixelService {
 
     private buildDirectApiBases(): string[] {
         const protocol = window.location.protocol;
-        const candidates = [window.location.hostname, 'localhost', '127.0.0.1']
+        const host = window.location.hostname;
+        const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+
+        const hostCandidates = isLocalHost
+            ? [host, 'localhost', '127.0.0.1']
+            : [host];
+
+        const candidates = hostCandidates
             .filter(Boolean)
-            .map(host => `${protocol}//${host}:8083/api`);
+            .map(candidateHost => `${protocol}//${candidateHost}:8083/api`);
+
+        return Array.from(new Set(candidates));
+    }
+
+    private buildDirectWsBases(): string[] {
+        const host = window.location.hostname;
+        const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+
+        const hostCandidates = isLocalHost
+            ? [host, 'localhost', '127.0.0.1']
+            : [host];
+
+        const candidates = hostCandidates
+            .filter(Boolean)
+            .map(candidateHost => `${this.wsProtocol}://${candidateHost}:8083/ws-pixels`);
 
         return Array.from(new Set(candidates));
     }

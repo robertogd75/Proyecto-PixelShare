@@ -122,16 +122,42 @@ export class CanvasComponent implements OnInit {
   public copyInviteUrl(): void {
     if (!this.currentRoomCode) return;
     const url = window.location.origin + '/room/' + this.currentRoomCode;
-    navigator.clipboard.writeText(url).then(() => {
-      alert('¡Enlace de invitación copiado al portapapeles!');
-    });
+    this.copyToClipboard(url, '¡Enlace de invitación copiado!');
   }
 
   public copyInviteCode(): void {
     if (!this.currentRoomCode) return;
-    navigator.clipboard.writeText(this.currentRoomCode).then(() => {
-      alert('¡Código de sala copiado al portapapeles!');
-    });
+    this.copyToClipboard(this.currentRoomCode, '¡Código de sala copiado!');
+  }
+
+  private copyToClipboard(text: string, message: string) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert(message);
+      }).catch(err => {
+        this.fallbackCopyTextToClipboard(text, message);
+      });
+    } else {
+      this.fallbackCopyTextToClipboard(text, message);
+    }
+  }
+
+  private fallbackCopyTextToClipboard(text: string, message: string) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      alert(message);
+    } catch (err) {
+      alert('Error: No se pudo copiar. Por favor, cópialo manualmente.');
+    }
+    document.body.removeChild(textArea);
   }
 
   public startDrawing(event: any): void {

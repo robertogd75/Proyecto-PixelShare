@@ -1,41 +1,48 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-
+import { Router, RouterModule } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <nav class="glass-nav">
-      <div class="logo">PixelShare</div>
+    <nav class="glass-navbar">
+      <div class="logo-container" routerLink="/">
+        <div class="logo-pixel"></div>
+        <span class="logo-text">PixelShare</span>
+      </div>
+      
       <div class="nav-links">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Mi Pizarra</a>
-        <a routerLink="/global" routerLinkActive="active">Mundial</a>
-        <div class="room-actions">
-          <button class="btn-secondary" (click)="openJoinModal()">Unirse</button>
-          <button class="btn-primary" (click)="openCreateModal()">+ Crear Sala</button>
-        </div>
+        <a routerLink="/global" routerLinkActive="active" class="nav-link">Pizarra Global</a>
+        <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
+        <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
       </div>
     </nav>
 
-    <!-- Modal Overlay -->
+    <!-- Modal System -->
     <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
-        <h2>{{ modalTitle }}</h2>
-        <p>{{ modalDescription }}</p>
+        <div class="modal-header">
+          <h2>{{ modalTitle }}</h2>
+          <button class="btn-close" (click)="closeModal()">&times;</button>
+        </div>
         
+        <div class="modal-body">
+          <p class="description">{{ modalDescription }}</p>
+
+          <!-- Create Mode -->
           <div class="form-group" *ngIf="modalMode === 'create'">
-            <label>Nombre de la sala</label>
-            <input type="text" [(ngModel)]="roomName" placeholder="Escribe el nombre..." autofocus>
+            <label>Nombre de la Pizarra</label>
+            <input type="text" [(ngModel)]="roomName" placeholder="Ej: Proyecto Arte Final" (keyup.enter)="submitModal()">
           </div>
-          
+
+          <!-- Join Mode -->
           <div class="form-group" *ngIf="modalMode === 'join'">
-            <label>Código de la sala</label>
-            <input type="text" [(ngModel)]="roomCode" placeholder="AAAA-BBBB-CCCC" autofocus>
+            <label>Código de la Sala</label>
+            <input type="text" [(ngModel)]="roomCode" placeholder="AAAA-BBBB-CCCC" (keyup.enter)="submitModal()">
           </div>
 
           <!-- Success State -->
@@ -55,129 +62,180 @@ import { PixelService } from '../../services/pixel.service';
           </div>
 
           <div class="modal-footer">
-            <button class="btn-cancel" (click)="closeModal()" *ngIf="modalMode !== 'success'">Cancelar</button>
+            <button class="btn-cancel" (click)="closeModal()">{{ modalMode === 'success' ? 'Cerrar' : 'Cancelar' }}</button>
             <button class="btn-submit" (click)="submitModal()" [disabled]="(modalMode === 'create' && !roomName) || (modalMode === 'join' && !roomCode)">
               {{ modalActionText }}
             </button>
           </div>
         </div>
       </div>
+    </div>
   `,
   styles: [`
-    .glass-nav {
-      position: fixed;
-      top: 25px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      max-width: 800px;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(12px);
-      border-radius: 50px;
-      padding: 12px 35px;
+    .glass-navbar {
+      height: 70px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      z-index: 10000;
+      padding: 0 40px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
-    .logo { font-weight: 800; font-size: 1.2rem; color: #333; letter-spacing: -0.5px; }
-    .nav-links { display: flex; gap: 25px; align-items: center; }
-    .room-actions { display: flex; gap: 10px; }
-    a { text-decoration: none; color: #666; font-weight: 600; font-size: 0.9rem; transition: color 0.3s; }
-    a:hover, a.active { color: #000; }
-    button { border: none; padding: 8px 18px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary { background: #000; color: #fff; }
-    .btn-secondary { background: #eee; color: #333; }
-    button:hover:not(:disabled) { transform: scale(1.05); }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .logo-pixel {
+      width: 24px;
+      height: 24px;
+      background: #000;
+      border-radius: 6px;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+    }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: #000;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .nav-link {
+      text-decoration: none;
+      color: #666;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 8px 15px;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: #000;
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    .nav-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-btn.primary { background: #000; color: #fff; }
+    .nav-btn.secondary { background: #f0f0f0; color: #333; }
+    .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
     /* Modal Styles */
     .modal-overlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
       backdrop-filter: blur(8px);
-      z-index: 20000;
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
+      z-index: 2000;
       padding: 20px;
     }
+
     .modal-content {
       background: white;
-      padding: 30px;
-      border-radius: 30px;
       width: 100%;
-      max-width: 400px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      animation: modalEnter 0.3s ease-out;
+      max-width: 450px;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes modalEnter {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+
+    @keyframes modalPop {
+      from { transform: scale(0.95) translateY(10px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
     }
-    h2 { margin: 0 0 10px 0; font-weight: 800; color: #1a1a1a; }
-    p { color: #666; font-size: 0.95rem; margin-bottom: 25px; }
+
+    .modal-header {
+      padding: 25px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .modal-header h2 { font-size: 1.25rem; font-weight: 800; margin: 0; }
+    .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+
+    .modal-body { padding: 30px; }
+    .description { color: #666; margin-bottom: 25px; line-height: 1.5; }
+
     .form-group { margin-bottom: 25px; }
-    label { display: block; font-size: 0.8rem; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 8px; }
-    input {
-      width: 100%;
-      padding: 12px 20px;
-      border-radius: 15px;
-      border: 2px solid #eee;
-      font-size: 1rem;
-      font-weight: 600;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    input:focus { border-color: #000; }
-    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
-    .btn-cancel { background: #f5f5f5; color: #666; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #f0f0f0; font-size: 1rem; font-weight: 600; transition: all 0.2s; }
+    .form-group input:focus { outline: none; border-color: #000; }
+
+    .modal-footer { display: flex; gap: 15px; margin-top: 10px; }
+    .btn-cancel, .btn-submit { flex: 1; padding: 14px; border-radius: 14px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+    .btn-cancel { background: #f8f8f8; color: #666; }
     .btn-submit { background: #000; color: #fff; }
-    .btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* Success State Styles */
     .success-content {
-      text-align: center;
-      padding: 10px 0;
-    }
-    .code-display {
-      background: #f8f9fa;
-      padding: 20px;
+      background: #fcfcfc;
+      border: 1px solid #f0f0f0;
       border-radius: 20px;
-      margin-bottom: 20px;
-      border: 2px dashed #ddd;
+      padding: 20px;
+      margin-bottom: 25px;
+      text-align: center;
     }
+    .code-display { margin-bottom: 20px; }
+    .code-display label { font-size: 0.75rem; font-weight: 800; color: #aaa; text-transform: uppercase; }
     .code-value {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 1.5rem;
-      font-weight: 800;
+      font-size: 2rem;
+      font-weight: 900;
       color: #000;
       letter-spacing: 2px;
-      margin-top: 10px;
+      margin-top: 5px;
     }
-    .success-actions {
-      display: flex;
-      gap: 15px;
-    }
+    .success-actions { display: flex; gap: 12px; }
     .btn-copy-code, .btn-copy-link {
       flex: 1;
-      padding: 15px;
-      border-radius: 15px;
+      padding: 12px;
+      border-radius: 12px;
       font-weight: 700;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       transition: all 0.2s;
-      border: none;
-      cursor: pointer;
     }
-    .btn-copy-code { background: #f0f0f0; color: #333; }
+    .btn-copy-code { background: #fff; border: 1px solid #eee; color: #333; }
     .btn-copy-link { background: #000; color: #fff; }
-    
-    .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
   `]
 })
 export class NavbarComponent {
@@ -187,22 +245,24 @@ export class NavbarComponent {
   roomCode = '';
   inviteCode = '';
 
-  get modalTitle() { 
-    if (this.modalMode === 'success') return '¡Sala Creada con Éxito!';
-    return this.modalMode === 'create' ? 'Crear Nueva Sala' : 'Unirse a Sala'; 
-  }
-  get modalDescription() { 
-    if (this.modalMode === 'success') return 'Comparte el código o el enlace con tus amigos para empezar a pintar juntos.';
-    return this.modalMode === 'create' 
-      ? 'Crea un espacio privado para pintar con tus amigos.' 
-      : 'Escribe el código de la sala para entrar.';
-  }
-  get modalActionText() { 
-    if (this.modalMode === 'success') return 'Ir a la Sala';
-    return this.modalMode === 'create' ? 'Crear Sala' : 'Entrar'; 
+  constructor(private router: Router, private pixelService: PixelService) {}
+
+  get modalTitle(): string { 
+    if (this.modalMode === 'success') return '¡Sala Creada!';
+    return this.modalMode === 'create' ? 'Nueva Pizarra' : 'Entrar a Sala'; 
   }
 
-  constructor(private router: Router, private pixelService: PixelService) {}
+  get modalDescription(): string { 
+    if (this.modalMode === 'success') return 'Tu sala está lista. Comparte el acceso con tus amigos.';
+    return this.modalMode === 'create' 
+      ? 'Define un nombre para tu espacio de dibujo colaborativo.' 
+      : 'Escribe el código de invitación para unirte.';
+  }
+
+  get modalActionText(): string { 
+    if (this.modalMode === 'success') return 'Entrar a la Sala';
+    return this.modalMode === 'create' ? 'Crear Ahora' : 'Unirse'; 
+  }
 
   openJoinModal() {
     this.modalMode = 'join';
@@ -217,9 +277,6 @@ export class NavbarComponent {
   }
 
   closeModal() {
-    if (this.modalMode === 'success') {
-      this.router.navigateByUrl(`/room/${this.inviteCode}`);
-    }
     this.showModal = false;
   }
 
@@ -237,30 +294,58 @@ export class NavbarComponent {
           this.modalMode = 'success';
         });
       }
-    } else {
+    } else if (this.modalMode === 'success') {
+      this.router.navigateByUrl(`/room/${this.inviteCode}`);
       this.closeModal();
     }
   }
 
   copyInvitation() {
     const url = window.location.origin + '/room/' + this.inviteCode;
-    navigator.clipboard.writeText(url).then(() => {
-      alert('¡Enlace de invitación copiado al portapapeles!');
-    });
+    this.copyToClipboard(url, '¡Enlace de invitación copiado!');
   }
 
   copyInvitationCode() {
-    navigator.clipboard.writeText(this.inviteCode).then(() => {
-      alert('¡Código de sala copiado al portapapeles!');
-    });
+    this.copyToClipboard(this.inviteCode, '¡Código de sala copiado!');
+  }
+
+  private copyToClipboard(text: string, message: string) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert(message);
+      }).catch(err => {
+        this.fallbackCopyTextToClipboard(text, message);
+      });
+    } else {
+      this.fallbackCopyTextToClipboard(text, message);
+    }
+  }
+
+  private fallbackCopyTextToClipboard(text: string, message: string) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      alert(message);
+    } catch (err) {
+      alert('Error: No se pudo copiar. Por favor, cópialo manualmente.');
+    }
+    document.body.removeChild(textArea);
   }
 
   private generateSecureCode(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let result = '';
     for (let i = 0; i < 12; i++) {
+      if (i > 0 && i % 4 === 0) result += '-';
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return result.match(/.{4}/g)?.join('-') || result;
+    return result;
   }
 }

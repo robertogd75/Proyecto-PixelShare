@@ -11,12 +11,16 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Map;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.net.URI;
 
 @Component
 public class PixelWebSocketHandler extends TextWebSocketHandler {
@@ -26,9 +30,9 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Set<WebSocketSession> sessions = Collections.synchronizedSet(new HashSet<>());
     
-    // Track room membership
     private final Map<String, Long> sessionRoomId = new ConcurrentHashMap<>();
     private final Map<Long, Integer> roomParticipants = new ConcurrentHashMap<>();
+    private final Map<Long, Long> emptyRoomsSince = new ConcurrentHashMap<>();
 
     public PixelWebSocketHandler(PixelRepository pixelRepository, RoomRepository roomRepository) {
         this.pixelRepository = pixelRepository;
@@ -38,17 +42,21 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         sessions.add(session);
-        
-        // Extract roomId from query params: /ws-pixels?roomId=123
         try {
-            String query = session.getUri().getQuery();
+            URI uri = session.getUri();
+            String query = uri != null ? uri.getQuery() : null;
             if (query != null) {
                 MultiValueMap<String, String> params = UriComponentsBuilder.fromUriString("?" + query).build().getQueryParams();
                 String roomIdStr = params.getFirst("roomId");
                 if (roomIdStr != null && !roomIdStr.equals("undefined") && !roomIdStr.isEmpty()) {
                     Long roomId = Long.parseLong(roomIdStr);
                     sessionRoomId.put(session.getId(), roomId);
+                    
+                    // Update participants count
                     roomParticipants.merge(roomId, 1, Integer::sum);
+                    
+                    // Room is active, remove from cleanup list
+                    emptyRoomsSince.remove(roomId);
                     System.out.println("Session " + session.getId() + " joined room " + roomId);
                 }
             }
@@ -62,17 +70,40 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
         sessions.remove(session);
         Long roomId = sessionRoomId.remove(session.getId());
         
-        if (roomId != null && roomId > 0) { // Don't delete global (roomId 0 or 1 usually) or private (null)
-            int count = roomParticipants.merge(roomId, -1, Integer::sum);
-            System.out.println("Session " + session.getId() + " left room " + roomId + ". Remaining: " + count);
-            if (count <= 0) {
-                roomParticipants.remove(roomId);
-                try {
-                    // Logic to delete room if empty
-                    roomRepository.deleteById(roomId);
-                    System.out.println("Room " + roomId + " deleted because it is empty.");
-                } catch (Exception e) {
-                    System.err.println("Error deleting empty room: " + e.getMessage());
+        if (roomId != null && roomId > 1) { // Global room (often ID 1) is persistent
+            Integer current = roomParticipants.get(roomId);
+            if (current != null) {
+                int newVal = current - 1;
+                if (newVal <= 0) {
+                    roomParticipants.remove(roomId);
+                    emptyRoomsSince.put(roomId, System.currentTimeMillis());
+                    System.out.println("Room " + roomId + " is now empty. Grace period started.");
+                } else {
+                    roomParticipants.put(roomId, newVal);
+                }
+            }
+        }
+    }
+
+    @Scheduled(fixedDelay = 60000)
+    public void cleanupEmptyRooms() {
+        long now = System.currentTimeMillis();
+        long gracePeriod = TimeUnit.MINUTES.toMillis(5);
+        
+        Iterator<Map.Entry<Long, Long>> it = emptyRoomsSince.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Long, Long> entry = it.next();
+            Long time = entry.getValue();
+            if (time != null && (now - time > gracePeriod)) {
+                Long roomId = entry.getKey();
+                if (roomId != null) {
+                    try {
+                        roomRepository.deleteById(roomId);
+                        System.out.println("Room " + roomId + " deleted after grace period.");
+                        it.remove();
+                    } catch (Exception e) {
+                        System.err.println("Error cleaning up room " + roomId + ": " + e.getMessage());
+                    }
                 }
             }
         }
@@ -88,12 +119,10 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
         
         String broadcastMessage = objectMapper.writeValueAsString(pixel);
         
-        // Broadcast to all other sessions in the same room
         synchronized (sessions) {
             for (WebSocketSession s : sessions) {
                 if (s.isOpen()) {
                     Long sRoomId = sessionRoomId.get(s.getId());
-                    // Match rooms (both null for global/private, or matching Long IDs)
                     boolean sameRoom = (pixel.getRoomId() == null && sRoomId == null) || 
                                      (pixel.getRoomId() != null && pixel.getRoomId().equals(sRoomId));
                     
@@ -101,7 +130,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                         try {
                             s.sendMessage(new TextMessage(broadcastMessage));
                         } catch (Exception e) {
-                            System.err.println("Error sending message to session " + s.getId());
+                            // Session might have closed during broadcast
                         }
                     }
                 }

@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 
+import { PixelService } from '../../services/pixel.service';
+
 @Component({
   selector: 'app-navbar',
   standalone: true,
@@ -86,7 +88,7 @@ import { RouterModule, Router } from '@angular/router';
   `]
 })
 export class NavbarComponent {
-  constructor(private router: Router) {}
+  constructor(private router: Router, private pixelService: PixelService) {}
 
   onJoinRoom() {
     const code = prompt("Introduce el código de la sala:");
@@ -99,7 +101,9 @@ export class NavbarComponent {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const name = prompt("Nombre de la sala:");
     if (name) {
-      this.router.navigateByUrl(`/room/${code}`);
+      this.pixelService.createRoom({ code, name }).subscribe(room => {
+        this.router.navigateByUrl(`/room/${room.code}`);
+      });
     }
   }
 }

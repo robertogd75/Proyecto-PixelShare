@@ -23,7 +23,7 @@ export class CanvasComponent implements OnInit {
 
   public currentColor = '#000000';
   public brushSize = 5;
-  public zoomLevel = 1.0;
+  public zoomLevel = 0.8;
   public canvasTitle = 'Pizarra Privada';
   public currentRoomName = '';
   public currentRoomCode = '';
@@ -150,7 +150,7 @@ export class CanvasComponent implements OnInit {
     if (event.ctrlKey) {
       event.preventDefault(); // Prevent browser zoom
       const delta = event.deltaY > 0 ? -0.1 : 0.1;
-      this.zoomLevel = Math.min(Math.max(0.1, this.zoomLevel + delta), 2.0);
+      this.zoomLevel = Math.min(Math.max(0.5, this.zoomLevel + delta), 2.0);
     }
   }
 

@@ -102,16 +102,12 @@ export class CanvasComponent implements OnInit {
     this.fitZoom();
   }
 
-  /** Calculates the minimum zoom so the canvas fits within the viewport with a small margin. */
+  /** Minimum zoom = exact height-fit so the canvas fills the viewport vertically with zero gray space. */
   private fitZoom(): void {
     const vp = this.viewportRef?.nativeElement;
     if (!vp) return;
     const canvas = this.canvasRef.nativeElement;
-    const margin = 40;
-    const scaleW = (vp.clientWidth  - margin * 2) / canvas.width;
-    const scaleH = (vp.clientHeight - margin * 2) / canvas.height;
-    this.minZoom = Math.min(scaleW, scaleH);
-    // Also clamp current zoom if it's now below the new minimum
+    this.minZoom = vp.clientHeight / canvas.height;
     if (this.zoomLevel < this.minZoom) this.zoomLevel = this.minZoom;
   }
 

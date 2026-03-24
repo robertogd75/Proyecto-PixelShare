@@ -12,10 +12,10 @@
 }
 
 .canvas-header {
-  padding-top: 100px;
-  padding-left: 30px;
-  padding-right: 30px;
-  padding-bottom: 20px;
+  padding-top: 70px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -113,7 +113,7 @@
 .panning-container {
   min-width: 100%;
   min-height: 100%;
-  padding: 40px 60px;
+  padding: 20px;
   display: flex;
   justify-content: center;
   align-items: flex-start;

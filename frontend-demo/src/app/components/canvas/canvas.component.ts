@@ -324,7 +324,22 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public showClearConfirm = false;
+  public showLeaveConfirm = false;
   public toolbarVisible = true;
+
+  public leaveRoom(): void {
+    this.showLeaveConfirm = true;
+  }
+
+  public cancelLeave(): void {
+    this.showLeaveConfirm = false;
+  }
+
+  public confirmLeave(): void {
+    this.showLeaveConfirm = false;
+    sessionStorage.removeItem('pixelshare_host_room');
+    this.router.navigate(['/']);
+  }
 
   public clearCanvas(): void {
     this.showClearConfirm = true;

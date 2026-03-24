@@ -95,6 +95,8 @@
 
 .btn-invite-pill.code { background: #f5f5f5; color: #444; }
 .btn-invite-pill.link { background: #000; color: #fff; }
+.btn-invite-pill.leave { background: #fff0f0; color: #e63946; border: 1px solid #ffd0d3; }
+.btn-invite-pill.leave:hover { background: #e63946; color: #fff; box-shadow: 0 5px 15px rgba(230,57,70,0.3); }
 
 .btn-invite-pill:hover {
   transform: translateY(-2px);
@@ -377,6 +379,15 @@ input:checked + .slider:before { transform: translateX(14px); }
   background: #e63946;
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(255, 71, 87, 0.45);
+}
+
+.btn-confirm-warning {
+  background: #e63946 !important;
+  box-shadow: 0 5px 15px rgba(230, 57, 70, 0.4) !important;
+}
+.btn-confirm-warning:hover {
+  background: #c1121f !important;
+  box-shadow: 0 8px 20px rgba(193, 18, 31, 0.5) !important;
 }
 
 /* Host Closed Overlay */

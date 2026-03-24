@@ -24,6 +24,9 @@
         <button class="btn-invite-pill link" (click)="copyInviteUrl()">
           <span>🔗 Copiar Enlace</span>
         </button>
+        <button class="btn-invite-pill leave" (click)="leaveRoom()">
+          <span>Abandonar</span>
+        </button>
       </div>
     </div>
   </div>
@@ -96,6 +99,22 @@
     </div>
 
     <button class="btn-clear" (click)="clearCanvas()">Limpiar Pizarra</button>
+  </div>
+
+  <!-- Leave Room Confirmation Overlay -->
+  <div class="confirm-overlay" *ngIf="showLeaveConfirm">
+    <div class="confirm-card">
+      <div class="confirm-icon">{{ isRoomHost ? '⚠️' : '→' }}</div>
+      <h3>{{ isRoomHost ? '¿Cerrar la sala?' : '¿Abandonar la sala?' }}</h3>
+      <p *ngIf="isRoomHost">Eres el anfitrión. Si abandonas, <strong>la sala se eliminará</strong> y todos los participantes serán expulsados.</p>
+      <p *ngIf="!isRoomHost">¿Seguro que quieres salir de la sala? Podrás volver a unirte con el código.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" (click)="cancelLeave()">Cancelar</button>
+        <button class="btn-confirm" [class.btn-confirm-warning]="isRoomHost" (click)="confirmLeave()">
+          {{ isRoomHost ? 'Cerrar sala' : 'Salir' }}
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Clear Confirmation Overlay -->

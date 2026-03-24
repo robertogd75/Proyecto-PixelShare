@@ -22,21 +22,21 @@ import { RouterModule, Router } from '@angular/router';
   styles: [`
     .glass-nav {
       position: fixed;
-      top: 20px;
+      top: 25px;
       left: 50%;
       transform: translateX(-50%);
       width: 90%;
       max-width: 800px;
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
       border-radius: 50px;
-      padding: 10px 30px;
+      padding: 12px 35px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      z-index: 2000;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      z-index: 10000; /* Absolute top priority */
     }
     .logo {
       font-weight: 800;
@@ -91,7 +91,7 @@ export class NavbarComponent {
   onJoinRoom() {
     const code = prompt("Introduce el código de la sala:");
     if (code) {
-      window.location.href = `/room/${code.toUpperCase()}`;
+      this.router.navigateByUrl(`/room/${code.toUpperCase()}`);
     }
   }
 
@@ -99,7 +99,7 @@ export class NavbarComponent {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const name = prompt("Nombre de la sala:");
     if (name) {
-      window.location.href = `/room/${code}`;
+      this.router.navigateByUrl(`/room/${code}`);
     }
   }
 }

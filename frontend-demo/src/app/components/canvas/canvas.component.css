@@ -1,28 +1,29 @@
 .canvas-container {
-  position: fixed;
+  position: absolute; /* Changed from fixed to absolute within app-root */
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: #f0f2f5;
   display: flex;
   flex-direction: column;
+  z-index: 10; /* Lower than navbar */
 }
 
 .canvas-header {
-  height: 100px;
+  height: 120px; /* More space for navbar */
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 20px;
-  z-index: 100;
-  pointer-events: none; /* Let clicks pass through to navbar if needed, or just let it stay above */
+  padding-bottom: 10px;
+  pointer-events: none;
 }
 
 .canvas-header h2 {
   font-weight: 800;
   color: #333;
   font-size: 1.4rem;
+  pointer-events: none;
 }
 
 .canvas-viewport {
@@ -32,6 +33,7 @@
   justify-content: center;
   align-items: flex-start;
   padding: 20px;
+  z-index: 50;
 }
 
 canvas {
@@ -40,6 +42,7 @@ canvas {
   cursor: crosshair;
   touch-action: none;
   flex-shrink: 0;
+  pointer-events: auto; /* Ensure we can draw */
 }
 
 .toolbar {

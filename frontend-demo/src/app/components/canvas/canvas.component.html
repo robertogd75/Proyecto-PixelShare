@@ -60,7 +60,7 @@
 
     <div class="tool-group zoom-group">
       <span class="tool-label">Zoom</span>
-      <input type="range" min="0.5" max="2" step="0.1" [(ngModel)]="zoomLevel">
+      <input type="range" [min]="minZoom" max="2" step="0.05" [(ngModel)]="zoomLevel">
       <span class="tool-value">{{ (zoomLevel * 100).toFixed(0) }}%</span>
     </div>
 

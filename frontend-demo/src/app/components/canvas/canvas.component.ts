@@ -16,6 +16,7 @@ import { Subscription } from 'rxjs';
 })
 export class CanvasComponent implements OnInit {
   @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
   private ctx!: CanvasRenderingContext2D;
   private isDrawing = false;
@@ -24,6 +25,7 @@ export class CanvasComponent implements OnInit {
   public currentColor = '#000000';
   public brushSize = 5;
   public zoomLevel = 0.8;
+  public minZoom = 0.3;
   public canvasTitle = 'Pizarra Privada';
   public currentRoomName = '';
   public currentRoomCode = '';
@@ -95,6 +97,20 @@ export class CanvasComponent implements OnInit {
       canvas.height = targetHeight;
       this.reinitCanvasSettings();
     }
+    this.fitZoom();
+  }
+
+  /** Calculates the minimum zoom so the canvas fits within the viewport with a small margin. */
+  private fitZoom(): void {
+    const vp = this.viewportRef?.nativeElement;
+    if (!vp) return;
+    const canvas = this.canvasRef.nativeElement;
+    const margin = 40;
+    const scaleW = (vp.clientWidth  - margin * 2) / canvas.width;
+    const scaleH = (vp.clientHeight - margin * 2) / canvas.height;
+    this.minZoom = Math.min(scaleW, scaleH);
+    // Also clamp current zoom if it's now below the new minimum
+    if (this.zoomLevel < this.minZoom) this.zoomLevel = this.minZoom;
   }
 
   private reinitCanvasSettings(): void {
@@ -122,6 +138,8 @@ export class CanvasComponent implements OnInit {
 
     this.resizeCanvas();
     this.toastService.success(`Tamaño cambiado a ${size}`);
+    this.fitZoom();
+    this.zoomLevel = this.minZoom;
   }
 
   private loadInitialState(): void {
@@ -150,7 +168,7 @@ export class CanvasComponent implements OnInit {
     if (event.ctrlKey) {
       event.preventDefault(); // Prevent browser zoom
       const delta = event.deltaY > 0 ? -0.1 : 0.1;
-      this.zoomLevel = Math.min(Math.max(0.5, this.zoomLevel + delta), 2.0);
+      this.zoomLevel = Math.min(Math.max(this.minZoom, this.zoomLevel + delta), 2.0);
     }
   }
 

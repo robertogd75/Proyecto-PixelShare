@@ -113,10 +113,11 @@
 .panning-container {
   min-width: 100%;
   min-height: 100%;
-  padding: 100px; /* Reduced from 500px for more drawing focus */
+  padding: 40px 60px;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  box-sizing: border-box;
 }
 
 canvas {

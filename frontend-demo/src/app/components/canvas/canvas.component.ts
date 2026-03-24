@@ -29,8 +29,8 @@ export class CanvasComponent implements OnInit {
   public currentRoomCode = '';
   public isHostClosed = false;
   public showGrid = false;
-  public canvasWidth = 2000; // Default
-  public canvasHeight = 2000;
+  public canvasWidth = 2000;  // A4 ratio: height = width * √2
+  public canvasHeight = 2828;
   private lastPos: { x: number, y: number } | null = null;
 
   constructor(
@@ -87,8 +87,8 @@ export class CanvasComponent implements OnInit {
     const isRoom = this.currentRoomId !== undefined;
 
     // For rooms, we use fixed large dimensions. For private, we use user-selected or default.
-    const targetWidth = isRoom ? 5000 : this.canvasWidth;
-    const targetHeight = isRoom ? 5000 : this.canvasHeight;
+    const targetWidth = isRoom ? 4000 : this.canvasWidth;
+    const targetHeight = isRoom ? 5657 : this.canvasHeight;
 
     if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
       canvas.width = targetWidth;
@@ -114,10 +114,10 @@ export class CanvasComponent implements OnInit {
     }
 
     switch(size) {
-      case 'small': this.canvasWidth = 1000; this.canvasHeight = 800; break;
-      case 'normal': this.canvasWidth = 2000; this.canvasHeight = 2000; break;
-      case 'large': this.canvasWidth = 3000; this.canvasHeight = 3000; break;
-      case 'huge': this.canvasWidth = 5000; this.canvasHeight = 5000; break;
+      case 'small':  this.canvasWidth = 1000; this.canvasHeight = 1414; break;
+      case 'normal': this.canvasWidth = 2000; this.canvasHeight = 2828; break;
+      case 'large':  this.canvasWidth = 3000; this.canvasHeight = 4243; break;
+      case 'huge':   this.canvasWidth = 4000; this.canvasHeight = 5657; break;
     }
 
     this.resizeCanvas();

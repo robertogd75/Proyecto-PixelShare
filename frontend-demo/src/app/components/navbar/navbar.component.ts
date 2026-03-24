@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { ToastService } from '../../services/toast.service';
+import { finalize, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -298,18 +299,29 @@ export class NavbarComponent {
       if (this.roomName && !this.isCreating) {
         this.isCreating = true;
         const code = this.generateSecureCode();
-        this.pixelService.createRoom({ code, name: this.roomName }).subscribe({
-          next: room => {
-            this.inviteCode = room.code;
-            this.modalMode = 'success';
-            this.isCreating = false;
-            this.toastService.success('¡Sala creada correctamente!');
-          },
-          error: () => {
-            this.isCreating = false;
-            this.toastService.error('Hubo un error al crear la sala.');
-          }
-        });
+        this.pixelService.createRoom({ code, name: this.roomName })
+          .pipe(
+            timeout(10000),
+            finalize(() => this.isCreating = false)
+          )
+          .subscribe({
+            next: room => {
+              if (room && room.code) {
+                this.inviteCode = room.code;
+                this.modalMode = 'success';
+                this.toastService.success('¡Sala creada correctamente!');
+              } else {
+                this.toastService.error('Error: Respuesta del servidor inválida.');
+              }
+            },
+            error: (err) => {
+              console.error('Room creation error:', err);
+              const errMsg = err.name === 'TimeoutError' 
+                ? 'El servidor tardó demasiado en responder.' 
+                : 'Hubo un error al crear la sala.';
+              this.toastService.error(errMsg);
+            }
+          });
       }
     } else if (this.modalMode === 'success') {
       this.router.navigateByUrl(`/room/${this.inviteCode}`);

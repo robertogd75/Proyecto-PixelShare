@@ -166,9 +166,12 @@ export class CanvasComponent implements OnInit {
   @HostListener('wheel', ['$event'])
   onWheel(event: WheelEvent) {
     if (event.ctrlKey) {
-      event.preventDefault(); // Prevent browser zoom
+      event.preventDefault();
       const delta = event.deltaY > 0 ? -0.1 : 0.1;
       this.zoomLevel = Math.min(Math.max(this.minZoom, this.zoomLevel + delta), 2.0);
+    } else if (event.shiftKey) {
+      event.preventDefault();
+      this.viewportRef.nativeElement.scrollLeft += event.deltaY;
     }
   }
 

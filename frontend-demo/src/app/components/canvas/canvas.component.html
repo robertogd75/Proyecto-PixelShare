@@ -87,12 +87,25 @@
       <span class="tool-label">Cuadrícula</span>
     </div>
 
-    <button class="btn-clear" (click)="clearCanvas()">Limpiar Muro</button>
+    <button class="btn-clear" (click)="clearCanvas()">Limpiar Pizarra</button>
   </div>
 
   <div class="status-indicator">
     <div class="dot"></div>
     En línea y sincronizado
+  </div>
+
+  <!-- Clear Confirmation Overlay -->
+  <div class="confirm-overlay" *ngIf="showClearConfirm">
+    <div class="confirm-card">
+      <div class="confirm-icon">🗑️</div>
+      <h3>¿Borrar pizarra?</h3>
+      <p>Esta acción eliminará todo el contenido. No se puede deshacer.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" (click)="cancelClear()">Cancelar</button>
+        <button class="btn-confirm" (click)="confirmClear()">Borrar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Host Closed Overlay -->

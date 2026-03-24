@@ -254,6 +254,97 @@ input:checked + .slider:before { transform: translateX(14px); }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: #2ed573; animation: pulse 2s infinite; }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
+/* Clear Confirmation Overlay */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9998;
+  animation: fadeIn 0.25s ease;
+}
+
+.confirm-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  padding: 35px 40px;
+  border-radius: 28px;
+  text-align: center;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.confirm-icon {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+}
+
+.confirm-card h3 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0 0 10px 0;
+}
+
+.confirm-card p {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 25px 0;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-cancel {
+  background: #f0f0f0;
+  color: #444;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+.btn-confirm {
+  background: #ff4757;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 5px 15px rgba(255, 71, 87, 0.35);
+}
+
+.btn-confirm:hover {
+  background: #e63946;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(255, 71, 87, 0.45);
+}
+
 /* Host Closed Overlay */
 .host-closed-overlay {
   position: fixed;

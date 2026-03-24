@@ -84,7 +84,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       } else {
         this.currentRoomId = undefined; // Private
         this.currentRoomName = 'Privada';
-        this.canvasTitle = 'Pizarra Privada (Solo tú)';
+        this.canvasTitle = 'Pizarra Privada';
         this.loadInitialState();
         this.setupWebSocket(this.currentRoomId);
       }
@@ -307,11 +307,21 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     // Instead, the grid will be a CSS background on the container for performance.
   }
 
+  public showClearConfirm = false;
+
   public clearCanvas(): void {
-    if (confirm('¿Estás seguro de que quieres borrar tu pizarra personal?')) {
-      const canvas = this.canvasRef.nativeElement;
-      this.ctx.fillStyle = 'white';
-      this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    this.showClearConfirm = true;
+  }
+
+  public confirmClear(): void {
+    this.showClearConfirm = false;
+    const canvas = this.canvasRef.nativeElement;
+    this.ctx.fillStyle = 'white';
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    this.toastService.success('Pizarra borrada correctamente');
+  }
+
+  public cancelClear(): void {
+    this.showClearConfirm = false;
   }
 }

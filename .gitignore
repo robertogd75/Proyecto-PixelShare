@@ -15,6 +15,11 @@ dist/
 .env
 application-local.properties
 
+# Local DB files
+data/
+*.mv.db
+*.lock.db
+
 # OS
 .DS_Store
 Thumbs.db

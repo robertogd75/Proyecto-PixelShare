@@ -130,6 +130,19 @@
     </div>
   </div>
 
+  <!-- Browser Back Confirmation Overlay -->
+  <div class="confirm-overlay" *ngIf="showBackConfirm">
+    <div class="confirm-card">
+      <div class="confirm-icon">⚠️</div>
+      <h3>¿Seguro que quieres salir?</h3>
+      <p>Si sales ahora, no se guardarán los dibujos que estés haciendo.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" (click)="cancelBackNavigation()">Seguir dibujando</button>
+        <button class="btn-confirm btn-confirm-warning" (click)="confirmBackNavigation()">Salir</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Host Closed Overlay -->
   <div class="host-closed-overlay" *ngIf="isHostClosed">
     <div class="host-closed-card">

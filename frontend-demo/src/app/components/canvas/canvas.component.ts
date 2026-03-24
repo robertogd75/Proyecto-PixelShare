@@ -5,7 +5,6 @@ import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/route
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 import { ToastService } from '../../services/toast.service';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-canvas',
@@ -45,6 +44,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.initCanvas();
+    this.setupBackNavigationGuard();
     this.handleRouting();
   }
 
@@ -279,6 +279,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       roomId: this.currentRoomId
     };
 
+    this.hasUnsavedChanges = true;
     this.drawPixelLocally(pixel, true);
     this.pixelService.sendPixel(pixel);
   }
@@ -325,7 +326,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public showClearConfirm = false;
   public showLeaveConfirm = false;
+  public showBackConfirm = false;
   public toolbarVisible = true;
+  public hasUnsavedChanges = false;
+
+  private allowNextBackNavigation = false;
 
   public leaveRoom(): void {
     this.showLeaveConfirm = true;
@@ -337,6 +342,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public confirmLeave(): void {
     this.showLeaveConfirm = false;
+    this.hasUnsavedChanges = false;
     sessionStorage.removeItem('pixelshare_host_room');
     this.router.navigate(['/']);
   }
@@ -350,10 +356,50 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     const canvas = this.canvasRef.nativeElement;
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    this.hasUnsavedChanges = true;
     this.toastService.success('Pizarra borrada correctamente');
   }
 
   public cancelClear(): void {
     this.showClearConfirm = false;
+  }
+
+  private setupBackNavigationGuard(): void {
+    window.history.pushState({ pixelshareGuard: true }, '', window.location.href);
+  }
+
+  @HostListener('window:popstate', ['$event'])
+  public onBrowserBack(_event: PopStateEvent): void {
+    if (this.allowNextBackNavigation) {
+      this.allowNextBackNavigation = false;
+      return;
+    }
+
+    if (!this.hasUnsavedChanges) {
+      this.allowNextBackNavigation = true;
+      window.history.back();
+      return;
+    }
+
+    this.showBackConfirm = true;
+    window.history.pushState({ pixelshareGuard: true }, '', window.location.href);
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  public onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!this.hasUnsavedChanges) return;
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  public cancelBackNavigation(): void {
+    this.showBackConfirm = false;
+  }
+
+  public confirmBackNavigation(): void {
+    this.showBackConfirm = false;
+    this.allowNextBackNavigation = true;
+    this.hasUnsavedChanges = false;
+    window.history.back();
   }
 }

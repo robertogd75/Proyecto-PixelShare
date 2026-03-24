@@ -1,18 +1,36 @@
 <div class="canvas-container">
   <div class="canvas-header">
-    <h2>{{ canvasTitle }}</h2>
+    <div class="title-section">
+      <h2>{{ canvasTitle }}</h2>
+    </div>
+    
+    <!-- Room Info Panel -->
+    <div class="room-info-badge" *ngIf="currentRoomCode">
+      <div class="info-item">
+        <span class="label">SALA</span>
+        <span class="value">{{ currentRoomName }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">CÓDIGO</span>
+        <span class="value code">{{ currentRoomCode }}</span>
+        <button class="btn-copy" (click)="$event.stopPropagation()">📋</button>
+      </div>
+    </div>
   </div>
 
-  <div class="canvas-viewport">
-    <canvas #canvasElement 
-            (mousedown)="startDrawing($event)" 
-            (mousemove)="draw($event)" 
-            (mouseup)="stopDrawing()" 
-            (mouseleave)="stopDrawing()"
-            (touchstart)="startDrawing($event)"
-            (touchmove)="draw($event)"
-            (touchend)="stopDrawing()">
-    </canvas>
+  <div class="canvas-viewport" #viewport>
+    <div class="panning-container">
+      <canvas #canvasElement 
+              [style.transform]="'scale(' + zoomLevel + ')'"
+              (mousedown)="startDrawing($event)" 
+              (mousemove)="draw($event)" 
+              (mouseup)="stopDrawing()" 
+              (mouseleave)="stopDrawing()"
+              (touchstart)="startDrawing($event)"
+              (touchmove)="draw($event)"
+              (touchend)="stopDrawing()">
+      </canvas>
+    </div>
   </div>
 
   <div class="toolbar">
@@ -23,8 +41,14 @@
 
     <div class="tool-group">
       <span class="tool-label">Tamaño</span>
-      <input type="range" min="1" max="20" [(ngModel)]="brushSize">
-      <span>{{ brushSize }}px</span>
+      <input type="range" min="1" max="50" [(ngModel)]="brushSize">
+      <span class="tool-value">{{ brushSize }}px</span>
+    </div>
+
+    <div class="tool-group zoom-group">
+      <span class="tool-label">Zoom</span>
+      <input type="range" min="0.1" max="2" step="0.1" [(ngModel)]="zoomLevel">
+      <span class="tool-value">{{ (zoomLevel * 100).toFixed(0) }}%</span>
     </div>
 
     <button class="btn-clear" (click)="clearCanvas()">Limpiar Muro</button>

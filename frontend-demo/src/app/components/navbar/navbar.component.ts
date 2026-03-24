@@ -1,13 +1,14 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 
 import { PixelService } from '../../services/pixel.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   template: `
     <nav class="glass-nav">
       <div class="logo">PixelShare</div>
@@ -15,11 +16,34 @@ import { PixelService } from '../../services/pixel.service';
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Mi Pizarra</a>
         <a routerLink="/global" routerLinkActive="active">Mundial</a>
         <div class="room-actions">
-          <button class="btn-secondary" (click)="onJoinRoom()">Unirse</button>
-          <button class="btn-primary" (click)="onCreateRoom()">+ Crear Sala</button>
+          <button class="btn-secondary" (click)="openJoinModal()">Unirse</button>
+          <button class="btn-primary" (click)="openCreateModal()">+ Crear Sala</button>
         </div>
       </div>
     </nav>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <h2>{{ modalTitle }}</h2>
+        <p>{{ modalDescription }}</p>
+        
+        <div class="form-group">
+          <label *ngIf="modalMode === 'create'">Nombre de la sala</label>
+          <input type="text" [(ngModel)]="roomName" placeholder="Escribe el nombre..." *ngIf="modalMode === 'create'" autofocus>
+          
+          <label *ngIf="modalMode === 'join'">Código de la sala</label>
+          <input type="text" [(ngModel)]="roomCode" placeholder="AAAA-BBBB-CCCC" *ngIf="modalMode === 'join'" autofocus>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-cancel" (click)="closeModal()">Cancelar</button>
+          <button class="btn-submit" (click)="submitModal()" [disabled]="(modalMode === 'create' && !roomName) || (modalMode === 'join' && !roomCode)">
+            {{ modalActionText }}
+          </button>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .glass-nav {
@@ -38,72 +62,119 @@ import { PixelService } from '../../services/pixel.service';
       align-items: center;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
       border: 1px solid rgba(255, 255, 255, 0.4);
-      z-index: 10000; /* Absolute top priority */
+      z-index: 10000;
     }
-    .logo {
-      font-weight: 800;
-      font-size: 1.2rem;
-      color: #333;
-      letter-spacing: -0.5px;
-    }
-    .nav-links {
+    .logo { font-weight: 800; font-size: 1.2rem; color: #333; letter-spacing: -0.5px; }
+    .nav-links { display: flex; gap: 25px; align-items: center; }
+    .room-actions { display: flex; gap: 10px; }
+    a { text-decoration: none; color: #666; font-weight: 600; font-size: 0.9rem; transition: color 0.3s; }
+    a:hover, a.active { color: #000; }
+    button { border: none; padding: 8px 18px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #000; color: #fff; }
+    .btn-secondary { background: #eee; color: #333; }
+    button:hover:not(:disabled) { transform: scale(1.05); }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      z-index: 20000;
       display: flex;
-      gap: 25px;
       align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
-    .room-actions {
-      display: flex;
-      gap: 10px;
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 30px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: modalEnter 0.3s ease-out;
     }
-    a {
-      text-decoration: none;
-      color: #666;
+    @keyframes modalEnter {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    h2 { margin: 0 0 10px 0; font-weight: 800; color: #1a1a1a; }
+    p { color: #666; font-size: 0.95rem; margin-bottom: 25px; }
+    .form-group { margin-bottom: 25px; }
+    label { display: block; font-size: 0.8rem; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+    input {
+      width: 100%;
+      padding: 12px 20px;
+      border-radius: 15px;
+      border: 2px solid #eee;
+      font-size: 1rem;
       font-weight: 600;
-      font-size: 0.9rem;
-      transition: color 0.3s;
+      outline: none;
+      transition: border-color 0.2s;
     }
-    a:hover, a.active {
-      color: #000;
-    }
-    button {
-      border: none;
-      padding: 8px 18px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: transform 0.2s, background 0.2s;
-    }
-    .btn-primary {
-      background: #000;
-      color: #fff;
-    }
-    .btn-secondary {
-      background: #eee;
-      color: #333;
-    }
-    button:hover {
-      transform: scale(1.05);
-    }
+    input:focus { border-color: #000; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-cancel { background: #f5f5f5; color: #666; }
+    .btn-submit { background: #000; color: #fff; }
+    .btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
   `]
 })
 export class NavbarComponent {
+  showModal = false;
+  modalMode: 'join' | 'create' = 'create';
+  roomName = '';
+  roomCode = '';
+
+  get modalTitle() { return this.modalMode === 'create' ? 'Crear Nueva Sala' : 'Unirse a Sala'; }
+  get modalDescription() { 
+    return this.modalMode === 'create' 
+      ? 'Crea un espacio privado para pintar con tus amigos.' 
+      : 'Escribe el código de la sala para entrar.';
+  }
+  get modalActionText() { return this.modalMode === 'create' ? 'Crear Sala' : 'Entrar'; }
+
   constructor(private router: Router, private pixelService: PixelService) {}
 
-  onJoinRoom() {
-    const code = prompt("Introduce el código de la sala:");
-    if (code) {
-      this.router.navigateByUrl(`/room/${code.toUpperCase()}`);
+  openJoinModal() {
+    this.modalMode = 'join';
+    this.roomCode = '';
+    this.showModal = true;
+  }
+
+  openCreateModal() {
+    this.modalMode = 'create';
+    this.roomName = '';
+    this.showModal = true;
+  }
+
+  closeModal() {
+    this.showModal = false;
+  }
+
+  submitModal() {
+    if (this.modalMode === 'join') {
+      if (this.roomCode) {
+        this.router.navigateByUrl(`/room/${this.roomCode.toUpperCase().trim()}`);
+        this.closeModal();
+      }
+    } else {
+      if (this.roomName) {
+        const code = this.generateSecureCode();
+        this.pixelService.createRoom({ code, name: this.roomName }).subscribe(room => {
+          this.router.navigateByUrl(`/room/${room.code}`);
+          this.closeModal();
+        });
+      }
     }
   }
 
-  onCreateRoom() {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const name = prompt("Nombre de la sala:");
-    if (name) {
-      this.pixelService.createRoom({ code, name }).subscribe(room => {
-        this.router.navigateByUrl(`/room/${room.code}`);
-      });
+  private generateSecureCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 for clarity
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    return result.match(/.{4}/g)?.join('-') || result;
   }
 }

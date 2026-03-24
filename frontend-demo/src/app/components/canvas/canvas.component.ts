@@ -17,11 +17,14 @@ export class CanvasComponent implements OnInit {
   
   private ctx!: CanvasRenderingContext2D;
   private isDrawing = false;
-  private currentRoomId: number | undefined = undefined; // undefined = Private (not saved)
+  private currentRoomId: number | undefined = undefined;
   
   public currentColor = '#000000';
   public brushSize = 5;
+  public zoomLevel = 1.0;
   public canvasTitle = 'Pizarra Privada';
+  public currentRoomName = '';
+  public currentRoomCode = '';
 
   constructor(
     private pixelService: PixelService,
@@ -45,6 +48,9 @@ export class CanvasComponent implements OnInit {
   private handleRouting(): void {
     this.route.url.subscribe((url: UrlSegment[]) => {
       const path = url[0]?.path;
+      this.currentRoomName = '';
+      this.currentRoomCode = '';
+      
       if (path === 'global') {
         this.currentRoomId = 0;
         this.canvasTitle = 'Pizarra Global (Colaborativa)';

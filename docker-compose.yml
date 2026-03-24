@@ -22,7 +22,7 @@ services:
       mysql:
         condition: service_healthy
     ports:
-      - "${BACKEND_PORT:-18083}:8083"
+      - "${BACKEND_PORT:-8083}:8083"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/pixeldb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER:-pixelshare}
@@ -33,7 +33,7 @@ services:
     build: ./frontend-demo
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-18888}:80"
+      - "${FRONTEND_PORT:-8888}:80"
     depends_on:
       - backend
 

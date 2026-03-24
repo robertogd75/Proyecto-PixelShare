@@ -93,6 +93,12 @@
   gap: 8px;
 }
 
+.inline-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
 .btn-invite-pill.code { background: var(--panel-muted); color: var(--text-main); }
 .btn-invite-pill.link { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
 .btn-invite-pill.leave { background: #fff0f0; color: #e63946; border: 1px solid #ffd0d3; }
@@ -185,6 +191,12 @@ canvas {
   box-shadow: 0 5px 15px rgba(255, 71, 87, 0.35);
   transition: transform 0.2s, box-shadow 0.2s;
 }
+
+.floating-icon {
+  width: 22px;
+  height: 22px;
+}
+
 .btn-floating-toggle:hover {
   background: #e63946;
   transform: scale(1.1);
@@ -327,7 +339,16 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 
 .confirm-icon {
-  font-size: 2.5rem;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  color: var(--text-main);
+}
+
+.confirm-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
   margin-bottom: 15px;
 }
 
@@ -424,8 +445,17 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 
 .icon-closed {
-  font-size: 3rem;
+  width: 52px;
+  height: 52px;
+  color: var(--text-main);
+  margin: 0 auto;
   margin-bottom: 20px;
+}
+
+.icon-closed svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .host-closed-card h1 {

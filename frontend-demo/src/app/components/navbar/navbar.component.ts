@@ -21,7 +21,12 @@ import { finalize, timeout } from 'rxjs';
       <div class="nav-links">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
         <button (click)="toggleTheme()" class="nav-btn theme-toggle" [attr.aria-label]="isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'">
-          <span>{{ isDarkMode ? '☀️' : '🌙' }}</span>
+          <svg *ngIf="!isDarkMode" class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3a1 1 0 0 1 1.05 1.34A7 7 0 0 0 19.66 11.74 1 1 0 0 1 21 12.79Z"/>
+          </svg>
+          <svg *ngIf="isDarkMode" class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M12 18a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0v-2a1 1 0 0 1 1-1Zm0-16a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm9 9a1 1 0 1 1 0 2h-2a1 1 0 1 1 0-2h2ZM5 11a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2h2Zm12.66 6.24 1.41 1.41a1 1 0 0 1-1.41 1.41l-1.41-1.41a1 1 0 1 1 1.41-1.41ZM7.34 6.93a1 1 0 0 1 0 1.41L5.93 9.75a1 1 0 1 1-1.41-1.41l1.41-1.41a1 1 0 0 1 1.41 0Zm12.13 0a1 1 0 0 1 0 1.41l-1.41 1.41a1 1 0 1 1-1.41-1.41l1.41-1.41a1 1 0 0 1 1.41 0ZM7.76 17.66a1 1 0 0 1-1.41 1.41l-1.41-1.41a1 1 0 0 1 1.41-1.41l1.41 1.41ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/>
+          </svg>
         </button>
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
         <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
@@ -59,10 +64,16 @@ import { finalize, timeout } from 'rxjs';
             </div>
             <div class="success-actions">
               <button class="btn-copy-code" (click)="copyInvitationCode()">
-                <span>📄 Copiar Código</span>
+                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M8 2h8a2 2 0 0 1 2 2v2h-2V4H8v12h2v2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm5 6h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2Zm0 2v10h8V10h-8Z"/>
+                </svg>
+                <span>Copiar Código</span>
               </button>
               <button class="btn-copy-link" (click)="copyInvitation()">
-                <span>🔗 Copiar Enlace</span>
+                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M10.59 13.41a1 1 0 0 1 0-1.41l3-3a3 3 0 0 1 4.24 4.24l-2.12 2.12a3 3 0 0 1-4.24 0 1 1 0 1 1 1.41-1.41 1 1 0 0 0 1.41 0l2.12-2.12a1 1 0 0 0-1.41-1.41l-3 3a1 1 0 0 1-1.41 0Zm2.82-2.82a1 1 0 0 1 0 1.41l-3 3a3 3 0 1 1-4.24-4.24l2.12-2.12a3 3 0 0 1 4.24 0 1 1 0 1 1-1.41 1.41 1 1 0 0 0-1.41 0L7.59 12.17a1 1 0 0 0 1.41 1.41l3-3a1 1 0 0 1 1.41 0Z"/>
+                </svg>
+                <span>Copiar Enlace</span>
               </button>
             </div>
           </div>
@@ -109,11 +120,21 @@ import { finalize, timeout } from 'rxjs';
       box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
     }
 
+    :host-context(.theme-dark) .logo-pixel {
+      background: #f5f7fa;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 8px 18px rgba(0,0,0,0.45);
+    }
+
     .logo-text {
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: -1px;
       color: var(--text-main);
+    }
+
+    :host-context(.theme-dark) .logo-text {
+      text-shadow: 0 0 10px rgba(255,255,255,0.18);
     }
 
     .nav-links {
@@ -154,9 +175,13 @@ import { finalize, timeout } from 'rxjs';
       height: 42px;
       padding: 0;
       border-radius: 50%;
-      font-size: 1.05rem;
       background: var(--panel-muted);
       color: var(--text-main);
+    }
+    .theme-icon {
+      width: 20px;
+      height: 20px;
+      display: block;
     }
     .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
@@ -248,6 +273,11 @@ import { finalize, timeout } from 'rxjs';
       justify-content: center;
       gap: 6px;
       transition: all 0.2s;
+    }
+    .action-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
     }
     .btn-copy-code { background: var(--panel-solid); border: 1px solid var(--border-soft); color: var(--text-main); }
     .btn-copy-link { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
@@ -405,8 +435,10 @@ export class NavbarComponent {
               let errMsg = 'Hubo un error al crear la sala.';
               if (err.name === 'TimeoutError') {
                 errMsg = 'El servidor tardó demasiado en responder.';
+              } else if (err.status === 502 || err.status === 503 || err.status === 504 || err.status === 0) {
+                errMsg = 'No se puede conectar con el servidor en este momento.';
               } else if (err.status) {
-                errMsg += ` (Error ${err.status}: ${err.statusText || 'Servidor no disponible'})`;
+                errMsg += ` (Error ${err.status})`;
               }
               this.toastService.error(errMsg, 5000);
               this.cdr.detectChanges();

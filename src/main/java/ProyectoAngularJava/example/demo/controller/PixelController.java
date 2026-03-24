@@ -18,7 +18,10 @@ public class PixelController {
     }
 
     @GetMapping
-    public List<Pixel> getPixels() {
+    public List<Pixel> getPixels(@RequestParam(required = false) Long roomId) {
+        if (roomId != null) {
+            return repository.findByRoomId(roomId);
+        }
         return repository.findAll();
     }
 

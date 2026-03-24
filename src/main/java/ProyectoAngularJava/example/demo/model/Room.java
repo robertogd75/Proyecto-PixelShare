@@ -11,19 +11,19 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 @Entity
-@Table(name = "pixels")
+@Table(name = "rooms")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Pixel {
+public class Room {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    private int x;
-    private int y;
-    private String color;
-    private Integer size;
-    private Long roomId;
+    private String code;
+    private String name;
+    private int width;
+    private int height;
+    private int maxParticipants;
 }

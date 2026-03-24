@@ -1,27 +1,37 @@
-<div class="container py-4">
-    <div class="row mb-3 align-items-center bg-white p-3 rounded shadow-sm">
-        <div class="col-auto">
-            <label class="form-label fw-bold">Color:</label>
-            <input type="color" class="form-control form-control-color" [(ngModel)]="selectedColor">
-        </div>
-        <div class="col-auto">
-            <label class="form-label fw-bold">Brush Size:</label>
-            <input type="range" class="form-range" min="1" max="20" [(ngModel)]="brushSize">
-        </div>
-        <div class="col text-end">
-            <button class="btn btn-outline-danger btn-sm" (click)="clearLocal()">Clear View</button>
-            <button class="btn btn-primary btn-sm ms-2" (click)="loadCanvas()">Refresh Wall</button>
-        </div>
+<div class="canvas-container">
+  <div class="canvas-header">
+    <h2>{{ canvasTitle }}</h2>
+  </div>
+
+  <div class="canvas-viewport">
+    <canvas #canvasElement 
+            (mousedown)="startDrawing($event)" 
+            (mousemove)="draw($event)" 
+            (mouseup)="stopDrawing()" 
+            (mouseleave)="stopDrawing()"
+            (touchstart)="startDrawing($event)"
+            (touchmove)="draw($event)"
+            (touchend)="stopDrawing()">
+    </canvas>
+  </div>
+
+  <div class="toolbar">
+    <div class="tool-group">
+      <span class="tool-label">Color</span>
+      <input type="color" [(ngModel)]="currentColor">
     </div>
 
-    <div class="canvas-wrapper shadow rounded bg-white overflow-hidden">
-        <canvas #pixelCanvas 
-                width="800" 
-                height="600"
-                (mousedown)="startDrawing($event)"
-                (mousemove)="draw($event)"
-                (mouseup)="stopDrawing()"
-                (mouseleave)="stopDrawing()">
-        </canvas>
+    <div class="tool-group">
+      <span class="tool-label">Tamaño</span>
+      <input type="range" min="1" max="20" [(ngModel)]="brushSize">
+      <span>{{ brushSize }}px</span>
     </div>
+
+    <button class="btn-clear" (click)="clearCanvas()">Limpiar Muro</button>
+  </div>
+
+  <div class="status-indicator">
+    <div class="dot"></div>
+    En línea y sincronizado
+  </div>
 </div>

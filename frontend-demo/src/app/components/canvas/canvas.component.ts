@@ -1,6 +1,7 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 
@@ -9,61 +10,145 @@ import { Pixel } from '../../models/pixel.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './canvas.component.html',
-  styleUrl: './canvas.component.css'
+  styleUrls: ['./canvas.component.css']
 })
-export class CanvasComponent implements AfterViewInit {
-  @ViewChild('pixelCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
+export class CanvasComponent implements OnInit {
+  @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   
   private ctx!: CanvasRenderingContext2D;
   private isDrawing = false;
+  private currentRoomId: number | undefined = undefined; // undefined = Private (not saved)
   
-  selectedColor = '#000000';
-  brushSize = 5;
+  public currentColor = '#000000';
+  public brushSize = 5;
+  public canvasTitle = 'Pizarra Privada';
 
-  constructor(private pixelService: PixelService) {}
+  constructor(
+    private pixelService: PixelService,
+    private route: ActivatedRoute
+  ) {}
 
-  ngAfterViewInit(): void {
-    const canvas = this.canvasRef.nativeElement;
-    this.ctx = canvas.getContext('2d')!;
-    this.loadCanvas();
+  ngOnInit(): void {
+    this.initCanvas();
+    this.handleRouting();
+    this.setupWebSocket();
   }
 
-  loadCanvas(): void {
-    this.pixelService.getPixels().subscribe(pixels => {
-      pixels.forEach(p => this.drawPixel(p.x, p.y, p.color, false));
+  private initCanvas(): void {
+    const canvas = this.canvasRef.nativeElement;
+    this.ctx = canvas.getContext('2d', { alpha: false })!;
+    this.resizeCanvas();
+    this.ctx.fillStyle = 'white';
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  private handleRouting(): void {
+    this.route.url.subscribe(url => {
+      const path = url[0]?.path;
+      if (path === 'global') {
+        this.currentRoomId = 0;
+        this.canvasTitle = 'Pizarra Global (Colaborativa)';
+        this.loadInitialState();
+      } else if (path === 'room') {
+        const code = url[1]?.path;
+        this.pixelService.getRoom(code).subscribe(room => {
+          if (room) {
+            this.currentRoomId = room.id;
+            this.canvasTitle = `Sala: ${room.name}`;
+            this.loadInitialState();
+          }
+        });
+      } else {
+        this.currentRoomId = undefined; // Private
+        this.canvasTitle = 'Pizarra Privada (Solo tú)';
+      }
     });
   }
 
-  startDrawing(event: MouseEvent): void {
+  @HostListener('window:resize')
+  private resizeCanvas(): void {
+    const canvas = this.canvasRef.nativeElement;
+    const isGlobal = this.currentRoomId === 0;
+    
+    // For Global/Rooms, make it "Enormous" by allowing overflow
+    canvas.width = isGlobal ? 5000 : window.innerWidth * 0.95;
+    canvas.height = isGlobal ? 5000 : window.innerHeight * 0.8;
+    
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+  }
+
+  private loadInitialState(): void {
+    if (this.currentRoomId === undefined) return;
+    
+    this.pixelService.getPixels(this.currentRoomId).subscribe(pixels => {
+      pixels.forEach(p => this.drawPixelLocally(p));
+    });
+  }
+
+  private setupWebSocket(): void {
+    this.pixelService.connect().subscribe(pixel => {
+      // Filter incoming pixels by roomId
+      if (pixel.roomId === this.currentRoomId) {
+        this.drawPixelLocally(pixel);
+      }
+    });
+  }
+
+  public startDrawing(event: MouseEvent | TouchEvent): void {
     this.isDrawing = true;
     this.draw(event);
   }
 
-  stopDrawing(): void {
+  public stopDrawing(): void {
     this.isDrawing = false;
+    this.ctx.beginPath();
   }
 
-  draw(event: MouseEvent): void {
+  public draw(event: MouseEvent | TouchEvent): void {
     if (!this.isDrawing) return;
 
-    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    const x = Math.floor(event.clientX - rect.left);
-    const y = Math.floor(event.clientY - rect.top);
+    const canvas = this.canvasRef.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    
+    let clientX, clientY;
+    if (event instanceof MouseEvent) {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    } else {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    }
 
-    this.drawPixel(x, y, this.selectedColor, true);
-  }
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
-  private drawPixel(x: number, y: number, color: string, save: boolean): void {
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(x, y, this.brushSize, this.brushSize);
+    const pixel: Pixel = {
+      x: Math.round(x),
+      y: Math.round(y),
+      color: this.currentColor,
+      size: this.brushSize,
+      roomId: this.currentRoomId
+    };
 
-    if (save) {
-      this.pixelService.savePixel({ x, y, color }).subscribe();
+    this.drawPixelLocally(pixel);
+    
+    // Only broadcast if not in private mode
+    if (this.currentRoomId !== undefined) {
+      this.pixelService.sendPixel(pixel);
     }
   }
 
-  clearLocal(): void {
+  private drawPixelLocally(pixel: Pixel): void {
+    this.ctx.fillStyle = pixel.color;
+    this.ctx.beginPath();
+    this.ctx.arc(pixel.x, pixel.y, (pixel.size || 5) / 2, 0, Math.PI * 2);
+    this.ctx.fill();
+  }
+
+  public clearCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
-    this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.ctx.fillStyle = 'white';
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }

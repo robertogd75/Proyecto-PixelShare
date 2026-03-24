@@ -323,6 +323,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public showClearConfirm = false;
+  public toolbarVisible = true;
 
   public clearCanvas(): void {
     this.showClearConfirm = true;

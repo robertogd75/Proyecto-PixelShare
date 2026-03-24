@@ -51,7 +51,11 @@
     </div>
   </div>
 
-  <div class="toolbar">
+  <div class="toolbar" [class.toolbar-hidden]="!toolbarVisible">
+    <button class="btn-toggle-toolbar" (click)="toolbarVisible = !toolbarVisible" title="Minimizar ajustes">
+      {{ toolbarVisible ? '✕' : '⚙️' }}
+    </button>
+    <div class="toolbar-controls" [class.controls-hidden]="!toolbarVisible">
     <div class="tool-group">
       <span class="tool-label">Color</span>
       <input type="color" [(ngModel)]="currentColor">
@@ -88,11 +92,7 @@
     </div>
 
     <button class="btn-clear" (click)="clearCanvas()">Limpiar Pizarra</button>
-  </div>
-
-  <div class="status-indicator">
-    <div class="dot"></div>
-    En línea y sincronizado
+    </div>
   </div>
 
   <!-- Clear Confirmation Overlay -->

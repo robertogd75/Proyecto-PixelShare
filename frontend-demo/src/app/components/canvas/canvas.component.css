@@ -12,10 +12,10 @@
 }
 
 .canvas-header {
-  padding-top: 70px;
+  padding-top: 80px;
   padding-left: 20px;
   padding-right: 20px;
-  padding-bottom: 10px;
+  padding-bottom: 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -140,15 +140,51 @@ canvas {
   transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(15px);
-  padding: 15px 35px;
+  padding: 15px 20px;
   border-radius: 50px;
   display: flex;
-  gap: 30px;
+  gap: 0;
   align-items: center;
   box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.5);
   z-index: 1000;
+  transition: padding 0.3s ease;
 }
+
+.toolbar-controls {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  overflow: hidden;
+  max-width: 1000px;
+  padding-left: 20px;
+  transition: max-width 0.35s ease, opacity 0.25s ease, padding 0.35s ease;
+  opacity: 1;
+}
+
+.toolbar-controls.controls-hidden {
+  max-width: 0;
+  opacity: 0;
+  padding-left: 0;
+  pointer-events: none;
+}
+
+.btn-toggle-toolbar {
+  background: none;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  color: #444;
+}
+.btn-toggle-toolbar:hover { background: rgba(0,0,0,0.06); }
 
 .tool-group { display: flex; align-items: center; gap: 12px; }
 .tool-label { font-size: 0.75rem; font-weight: 800; color: #666; text-transform: uppercase; letter-spacing: 1px; }
@@ -234,25 +270,6 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
 }
 input:checked + .slider { background-color: #000; }
 input:checked + .slider:before { transform: translateX(14px); }
-
-.status-indicator {
-  position: fixed;
-  bottom: 100px; /* Above toolbar */
-  right: 30px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 10px 18px;
-  border-radius: 25px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-  z-index: 900;
-}
-
-.dot { width: 10px; height: 10px; border-radius: 50%; background: #2ed573; animation: pulse 2s infinite; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
 /* Clear Confirmation Overlay */
 .confirm-overlay {

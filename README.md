@@ -39,4 +39,5 @@ Pizarra colectiva en tiempo real donde cualquiera puede dejar su huella. Este pr
 
 ### 👨‍💻 Autor
 **Roberto García Delgado**  
-*Desarrollador Web (DAW)*
+*Desarrollador Web Full Stack*  
+🌐 [rgardel.es](https://rgardel.es)

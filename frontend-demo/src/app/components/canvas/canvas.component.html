@@ -3,7 +3,7 @@
     <div class="title-section">
       <h2>{{ canvasTitle }}</h2>
     </div>
-    
+
     <!-- Room Info Panel -->
     <div class="room-info-badge" *ngIf="currentRoomCode">
       <div class="info-group">
@@ -16,7 +16,7 @@
           <span class="value code">{{ currentRoomCode }}</span>
         </div>
       </div>
-      
+
       <div class="invite-actions">
         <button class="btn-invite-pill code" (click)="copyInviteCode()">
           <span>📄 Copiar Código</span>
@@ -31,16 +31,17 @@
   <div class="canvas-viewport" #viewport>
     <div class="panning-container">
       <div class="canvas-wrapper" [style.transform]="'scale(' + zoomLevel + ')'">
-        <canvas #canvasElement 
-                (mousedown)="startDrawing($event)" 
-                (mousemove)="draw($event)" 
-                (mouseup)="stopDrawing()" 
+        <canvas #canvasElement
+                (mousedown)="startDrawing($event)"
+                (mousemove)="draw($event)"
+                (mouseup)="stopDrawing()"
                 (mouseleave)="stopDrawing()"
                 (touchstart)="startDrawing($event)"
                 (touchmove)="draw($event)"
                 (touchend)="stopDrawing()">
         </canvas>
-        <div class="grid-overlay" [class.active]="showGrid"></div>
+        <div class="grid-overlay" [class.active]="showGrid"
+             [style.background-size]="(50 / zoomLevel) + 'px ' + (50 / zoomLevel) + 'px'"></div>
       </div>
     </div>
   </div>

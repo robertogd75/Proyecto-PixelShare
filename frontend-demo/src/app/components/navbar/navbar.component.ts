@@ -321,10 +321,13 @@ export class NavbarComponent {
             },
             error: (err) => {
               console.error('Room creation error:', err);
-              const errMsg = err.name === 'TimeoutError' 
-                ? 'El servidor tardó demasiado en responder.' 
-                : 'Hubo un error al crear la sala.';
-              this.toastService.error(errMsg);
+              let errMsg = 'Hubo un error al crear la sala.';
+              if (err.name === 'TimeoutError') {
+                errMsg = 'El servidor tardó demasiado en responder.';
+              } else if (err.status) {
+                errMsg += ` (Error ${err.status}: ${err.statusText || 'Servidor no disponible'})`;
+              }
+              this.toastService.error(errMsg, 5000);
               this.cdr.detectChanges();
             }
           });

@@ -9,7 +9,7 @@ import { Pixel } from '../models/pixel.model';
 })
 export class PixelService {
     private readonly apiUrl = '/api/pixels';
-    private readonly wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws-pixels`;
+    private readonly baseWsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws-pixels`;
     private socket$: WebSocketSubject<Pixel> | null = null;
 
     constructor(private http: HttpClient) {}
@@ -27,10 +27,13 @@ export class PixelService {
         return this.http.post<any>('/api/rooms', room);
     }
 
-    connect(): Observable<Pixel> {
-        if (!this.socket$) {
-            this.socket$ = webSocket(this.wsUrl);
+    connect(roomId?: number): Observable<Pixel> {
+        if (this.socket$) {
+            this.socket$.complete();
+            this.socket$ = null;
         }
+        const wsUrl = roomId !== undefined ? `${this.baseWsUrl}?roomId=${roomId}` : this.baseWsUrl;
+        this.socket$ = webSocket(wsUrl);
         return this.socket$.asObservable();
     }
 

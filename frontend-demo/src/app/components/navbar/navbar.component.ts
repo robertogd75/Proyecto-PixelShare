@@ -44,9 +44,14 @@ import { PixelService } from '../../services/pixel.service';
               <label>Código de Acceso</label>
               <div class="code-value">{{ inviteCode }}</div>
             </div>
-            <button class="btn-copy-full" (click)="copyInvitation()">
-              <span>📋 Copiar Enlace de Invitación</span>
-            </button>
+            <div class="success-actions">
+              <button class="btn-copy-code" (click)="copyInvitationCode()">
+                <span>📄 Copiar Código</span>
+              </button>
+              <button class="btn-copy-link" (click)="copyInvitation()">
+                <span>🔗 Copiar Enlace</span>
+              </button>
+            </div>
           </div>
 
           <div class="modal-footer">
@@ -152,20 +157,27 @@ import { PixelService } from '../../services/pixel.service';
       letter-spacing: 2px;
       margin-top: 10px;
     }
-    .btn-copy-full {
-      width: 100%;
-      background: #000;
-      color: #fff;
+    .success-actions {
+      display: flex;
+      gap: 15px;
+    }
+    .btn-copy-code, .btn-copy-link {
+      flex: 1;
       padding: 15px;
       border-radius: 15px;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      transition: transform 0.2s;
+      gap: 8px;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
     }
-    .btn-copy-full:hover { transform: translateY(-2px); }
+    .btn-copy-code { background: #f0f0f0; color: #333; }
+    .btn-copy-link { background: #000; color: #fff; }
+    
+    .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
   `]
 })
 export class NavbarComponent {
@@ -234,6 +246,12 @@ export class NavbarComponent {
     const url = window.location.origin + '/room/' + this.inviteCode;
     navigator.clipboard.writeText(url).then(() => {
       alert('¡Enlace de invitación copiado al portapapeles!');
+    });
+  }
+
+  copyInvitationCode() {
+    navigator.clipboard.writeText(this.inviteCode).then(() => {
+      alert('¡Código de sala copiado al portapapeles!');
     });
   }
 

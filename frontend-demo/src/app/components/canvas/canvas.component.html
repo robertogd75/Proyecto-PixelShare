@@ -6,17 +6,25 @@
     
     <!-- Room Info Panel -->
     <div class="room-info-badge" *ngIf="currentRoomCode">
-      <div class="info-item">
-        <span class="label">SALA</span>
-        <span class="value">{{ currentRoomName }}</span>
+      <div class="info-group">
+        <div class="info-item">
+          <span class="label">SALA</span>
+          <span class="value">{{ currentRoomName }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">CÓDIGO</span>
+          <span class="value code">{{ currentRoomCode }}</span>
+        </div>
       </div>
-      <div class="info-item">
-        <span class="label">CÓDIGO</span>
-        <span class="value code">{{ currentRoomCode }}</span>
+      
+      <div class="invite-actions">
+        <button class="btn-invite-pill code" (click)="copyInviteCode()">
+          <span>📄 Copiar Código</span>
+        </button>
+        <button class="btn-invite-pill link" (click)="copyInviteUrl()">
+          <span>🔗 Copiar Enlace</span>
+        </button>
       </div>
-      <button class="btn-invite-pill" (click)="copyInviteUrl()">
-        <span>🔗 Copiar Invitación</span>
-      </button>
     </div>
   </div>
 

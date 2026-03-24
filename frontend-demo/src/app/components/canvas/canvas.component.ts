@@ -34,7 +34,6 @@ export class CanvasComponent implements OnInit {
   ngOnInit(): void {
     this.initCanvas();
     this.handleRouting();
-    this.setupWebSocket();
   }
 
   private initCanvas(): void {
@@ -52,21 +51,29 @@ export class CanvasComponent implements OnInit {
       this.currentRoomCode = '';
       
       if (path === 'global') {
-        this.currentRoomId = 0;
+        this.currentRoomId = 1; // Global ID in DB
+        this.currentRoomName = 'Global';
         this.canvasTitle = 'Pizarra Global (Colaborativa)';
         this.loadInitialState();
+        this.setupWebSocket(this.currentRoomId);
       } else if (path === 'room') {
         const code = url[1]?.path;
         this.pixelService.getRoom(code).subscribe(room => {
           if (room) {
             this.currentRoomId = room.id;
+            this.currentRoomName = room.name;
+            this.currentRoomCode = room.code;
             this.canvasTitle = `Sala: ${room.name}`;
             this.loadInitialState();
+            this.setupWebSocket(this.currentRoomId);
           }
         });
       } else {
         this.currentRoomId = undefined; // Private
+        this.currentRoomName = 'Privada';
         this.canvasTitle = 'Pizarra Privada (Solo tú)';
+        this.loadInitialState();
+        this.setupWebSocket(this.currentRoomId);
       }
     });
   }
@@ -74,10 +81,11 @@ export class CanvasComponent implements OnInit {
   @HostListener('window:resize')
   public resizeCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
-    const isGlobal = this.currentRoomId === 0;
+    const isGlobalOrRoom = this.currentRoomId !== undefined;
     
-    canvas.width = isGlobal ? 5000 : window.innerWidth * 0.95;
-    canvas.height = isGlobal ? 5000 : window.innerHeight * 0.8;
+    // Always use large canvas if in a room or global
+    canvas.width = isGlobalOrRoom ? 5000 : window.innerWidth * 0.95;
+    canvas.height = isGlobalOrRoom ? 5000 : window.innerHeight * 0.8;
     
     if (this.ctx) {
       this.ctx.lineCap = 'round';
@@ -93,9 +101,10 @@ export class CanvasComponent implements OnInit {
     });
   }
 
-  private setupWebSocket(): void {
-    this.pixelService.connect().subscribe(pixel => {
-      if (pixel.roomId === this.currentRoomId) {
+  private setupWebSocket(roomId?: number): void {
+    this.pixelService.connect(roomId).subscribe(pixel => {
+      // Basic safety check though backend now handles filtering
+      if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
         this.drawPixelLocally(pixel);
       }
     });
@@ -118,62 +127,57 @@ export class CanvasComponent implements OnInit {
     });
   }
 
+  public copyInviteCode(): void {
+    if (!this.currentRoomCode) return;
+    navigator.clipboard.writeText(this.currentRoomCode).then(() => {
+      alert('¡Código de sala copiado al portapapeles!');
+    });
+  }
+
   public startDrawing(event: any): void {
     this.isDrawing = true;
     this.draw(event);
   }
 
-  @HostListener('window:mouseup')
-  @HostListener('window:touchend')
   public stopDrawing(): void {
     this.isDrawing = false;
-    if (this.ctx) this.ctx.beginPath();
   }
 
+  @HostListener('mousemove', ['$event'])
   public draw(event: any): void {
     if (!this.isDrawing) return;
 
-    event.preventDefault(); // Prevent scrolling while drawing on mobile
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
     
-    let clientX: number, clientY: number;
-    if (event.touches) {
-      clientX = event.touches[0].clientX;
-      clientY = event.touches[0].clientY;
-    } else {
-      clientX = (event as MouseEvent).clientX;
-      clientY = (event as MouseEvent).clientY;
-    }
+    // Adjust coordinates for zoom level
+    const x = Math.floor((event.clientX - rect.left) / this.zoomLevel);
+    const y = Math.floor((event.clientY - rect.top) / this.zoomLevel);
 
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    const pixel: Pixel = {
-      x: Math.round(x),
-      y: Math.round(y),
-      color: this.currentColor,
+    const pixel: Pixel = { 
+      x, 
+      y, 
+      color: this.currentColor, 
       size: this.brushSize,
-      roomId: this.currentRoomId
+      roomId: this.currentRoomId 
     };
-
-    this.drawPixelLocally(pixel);
     
-    if (this.currentRoomId !== undefined) {
-      this.pixelService.sendPixel(pixel);
-    }
+    this.drawPixelLocally(pixel);
+    this.pixelService.sendPixel(pixel);
   }
 
   private drawPixelLocally(pixel: Pixel): void {
     this.ctx.fillStyle = pixel.color;
     this.ctx.beginPath();
-    this.ctx.arc(pixel.x, pixel.y, (pixel.size || 5) / 2, 0, Math.PI * 2);
+    this.ctx.arc(pixel.x, pixel.y, pixel.size || 5, 0, Math.PI * 2);
     this.ctx.fill();
   }
 
   public clearCanvas(): void {
-    const canvas = this.canvasRef.nativeElement;
-    this.ctx.fillStyle = 'white';
-    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (confirm('¿Estás seguro de que quieres borrar tu pizarra personal?')) {
+      const canvas = this.canvasRef.nativeElement;
+      this.ctx.fillStyle = 'white';
+      this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
   }
 }

@@ -2,6 +2,8 @@ export interface Pixel {
     id?: number;
     x: number;
     y: number;
+    fromX?: number; // Previous position for line segment drawing
+    fromY?: number; // Previous position for line segment drawing
     color: string;
     size?: number;
     roomId?: number;

@@ -274,6 +274,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     const pixel: Pixel = {
       x,
       y,
+      fromX: this.lastPos?.x,
+      fromY: this.lastPos?.y,
       color: this.currentColor,
       size: this.brushSize,
       roomId: this.currentRoomId
@@ -284,13 +286,14 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   private drawPixelLocally(pixel: Pixel, isLocal: boolean): void {
-    if (isLocal) {
-      this.ctx.strokeStyle = pixel.color;
-      this.ctx.lineWidth = pixel.size || 5;
-      this.ctx.lineCap = 'round';
-      this.ctx.lineJoin = 'round';
+    this.ctx.strokeStyle = pixel.color;
+    this.ctx.lineWidth = pixel.size || 5;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
 
-      this.ctx.beginPath();
+    this.ctx.beginPath();
+    if (isLocal) {
+      // Local: use the tracked lastPos for connection
       if (this.lastPos) {
         this.ctx.moveTo(this.lastPos.x, this.lastPos.y);
         this.ctx.lineTo(pixel.x, pixel.y);
@@ -298,15 +301,18 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         this.ctx.moveTo(pixel.x, pixel.y);
         this.ctx.lineTo(pixel.x, pixel.y);
       }
-      this.ctx.stroke();
       this.lastPos = { x: pixel.x, y: pixel.y };
     } else {
-      // For remote pixels, we draw points to avoid connecting different users
-      this.ctx.fillStyle = pixel.color;
-      this.ctx.beginPath();
-      this.ctx.arc(pixel.x, pixel.y, (pixel.size || 5) / 2, 0, Math.PI * 2);
-      this.ctx.fill();
+      // Remote: use fromX/fromY if available for connected lines, else draw dot
+      if (pixel.fromX !== undefined && pixel.fromY !== undefined) {
+        this.ctx.moveTo(pixel.fromX, pixel.fromY);
+        this.ctx.lineTo(pixel.x, pixel.y);
+      } else {
+        this.ctx.moveTo(pixel.x, pixel.y);
+        this.ctx.lineTo(pixel.x, pixel.y);
+      }
     }
+    this.ctx.stroke();
   }
 
   get gridBackgroundImage(): string {

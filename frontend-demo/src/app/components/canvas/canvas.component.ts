@@ -72,18 +72,27 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
       if (path === 'room') {
         const code = url[1]?.path;
-        this.pixelService.getRoom(code).subscribe(room => {
-          if (room) {
-            this.currentRoomId = room.id;
-            this.currentRoomName = room.name;
-            this.currentRoomCode = room.code;
-            this.canvasTitle = `Sala: ${room.name}`;
-            this.isRoomHost = sessionStorage.getItem('pixelshare_host_room') === room.code;
-            this.canvasWidth = 5657;
-            this.canvasHeight = 4000;
-            this.resizeCanvas();
-            this.loadInitialState();
-            this.setupWebSocket(this.currentRoomId);
+        this.pixelService.getRoom(code).subscribe({
+          next: room => {
+            if (room && room.id) {
+              this.currentRoomId = room.id;
+              this.currentRoomName = room.name;
+              this.currentRoomCode = room.code;
+              this.canvasTitle = `Sala: ${room.name}`;
+              this.isRoomHost = sessionStorage.getItem('pixelshare_host_room') === room.code;
+              this.canvasWidth = 5657;
+              this.canvasHeight = 4000;
+              this.resizeCanvas();
+              this.loadInitialState();
+              this.setupWebSocket(this.currentRoomId);
+            } else {
+              this.toastService.error('Sala no encontrada. Comprueba el código e inténtalo de nuevo.');
+              this.router.navigate(['/']);
+            }
+          },
+          error: () => {
+            this.toastService.error('Sala no encontrada. Comprueba el código e inténtalo de nuevo.');
+            this.router.navigate(['/']);
           }
         });
       } else {

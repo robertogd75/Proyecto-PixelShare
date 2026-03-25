@@ -177,7 +177,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   private setupWebSocket(roomId?: number): void {
     this.pixelService.connect(roomId).subscribe(pixel => {
-      // Basic safety check though backend now handles filtering
       if (pixel.type === 'HOST_CLOSED') {
         this.isHostClosed = true;
         this.toastService.info('El anfitrión ha cerrado la sala.', 5000);
@@ -187,6 +186,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         this.canvasHeight = pixel.height;
         this.resizeCanvas();
         this.fitZoom();
+      } else if (pixel.type === 'CLEAR') {
+        const canvas = this.canvasRef.nativeElement;
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
         this.drawPixelLocally(pixel, false);
       }
@@ -312,8 +315,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       }
       this.lastPos = { x: pixel.x, y: pixel.y };
     } else {
-      // Remote: use fromX/fromY if available for connected lines, else draw dot
-      if (pixel.fromX !== undefined && pixel.fromY !== undefined) {
+      // Remote: use fromX/fromY only if they are actual numbers (not null/undefined)
+      if (pixel.fromX != null && pixel.fromY != null) {
         this.ctx.moveTo(pixel.fromX, pixel.fromY);
         this.ctx.lineTo(pixel.x, pixel.y);
       } else {
@@ -351,6 +354,16 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
     this.toastService.success('Pizarra borrada correctamente');
+
+    // Broadcast clear to all room participants
+    if (this.currentRoomId !== undefined) {
+      const clearMsg: Pixel = {
+        x: 0, y: 0, color: '',
+        type: 'CLEAR',
+        roomId: this.currentRoomId
+      };
+      this.pixelService.sendPixel(clearMsg);
+    }
   }
 
   public cancelClear(): void {

@@ -153,7 +153,10 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull TextMessage message) throws Exception {
         Pixel pixel = objectMapper.readValue(message.getPayload(), Pixel.class);
         
-        if (pixel.getRoomId() != null && !"RESIZE".equals(pixel.getType())) {
+        // Only save to DB if it's not a real-time control message
+        // Drawing pixels are NOT persisted here to avoid lag — persistence is handled separately
+        boolean isControlMessage = pixel.getType() != null;
+        if (!isControlMessage && pixel.getRoomId() != null) {
             pixelRepository.save(pixel);
         }
         

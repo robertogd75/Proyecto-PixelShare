@@ -36,4 +36,10 @@ public class Pixel {
 
     @Transient
     private Integer height; // Used in RESIZE messages
+
+    @Transient
+    private Integer fromX; // Previous X position for line segment drawing (not persisted)
+
+    @Transient
+    private Integer fromY; // Previous Y position for line segment drawing (not persisted)
 }

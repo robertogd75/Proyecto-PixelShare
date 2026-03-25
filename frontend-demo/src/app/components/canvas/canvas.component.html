@@ -68,16 +68,17 @@
            [style.height.px]="canvasHeight * zoomLevel">
         <div class="canvas-wrapper" 
              [style.transform]="'scale(' + zoomLevel + ')'" 
-             [class.is-restricted]="isDrawRestricted"
-             (mousedown)="startDrawing($event)"
-             (mousemove)="draw($event)"
-             (mouseup)="stopDrawing()"
-             (mouseleave)="stopDrawing()"
-             (touchstart)="startDrawing($event)"
-             (touchmove)="draw($event)"
-             (touchend)="stopDrawing()">
+             [class.is-restricted]="isDrawRestricted">
           <canvas #canvasElement></canvas>
-          <canvas #tempCanvas class="temp-canvas"></canvas>
+          <canvas #tempCanvas class="temp-canvas"
+                  (mousedown)="startDrawing($event)"
+                  (mousemove)="draw($event)"
+                  (mouseup)="stopDrawing()"
+                  (mouseleave)="stopDrawing()"
+                  (touchstart)="startDrawing($event)"
+                  (touchmove)="draw($event)"
+                  (touchend)="stopDrawing()">
+          </canvas>
           <div class="restricted-overlay" *ngIf="isDrawRestricted">
             <span>🔒 Pizarra restringida por el anfitrión</span>
           </div>
@@ -111,11 +112,21 @@
         <span class="arrow">▾</span>
       </div>
       <div class="tool-menu" *ngIf="showToolMenu">
-        <button class="tool-item" [class.active]="selectedTool === 'brush'" (click)="selectTool('brush')">🖌️ Pincel</button>
-        <button class="tool-item" [class.active]="selectedTool === 'eraser'" (click)="selectTool('eraser')">🧽 Borrador</button>
-        <button class="tool-item" [class.active]="selectedTool === 'line'" (click)="selectTool('line')">📏 Línea</button>
-        <button class="tool-item" [class.active]="selectedTool === 'rect'" (click)="selectTool('rect')">⬜ Rectángulo</button>
-        <button class="tool-item" [class.active]="selectedTool === 'circle'" (click)="selectTool('circle')">⭕ Círculo</button>
+        <button class="tool-item" [class.active]="selectedTool === 'brush'" (click)="selectTool('brush')">
+          <span class="tool-icon">🖌️</span> Pincel
+        </button>
+        <button class="tool-item" [class.active]="selectedTool === 'eraser'" (click)="selectTool('eraser')">
+          <span class="tool-icon">🧽</span> Borrador
+        </button>
+        <button class="tool-item" [class.active]="selectedTool === 'line'" (click)="selectTool('line')">
+          <span class="tool-icon">📏</span> Línea
+        </button>
+        <button class="tool-item" [class.active]="selectedTool === 'rect'" (click)="selectTool('rect')">
+          <span class="tool-icon">⬜</span> Rectángulo
+        </button>
+        <button class="tool-item" [class.active]="selectedTool === 'circle'" (click)="selectTool('circle')">
+          <span class="tool-icon">⭕</span> Círculo
+        </button>
       </div>
     </div>
 

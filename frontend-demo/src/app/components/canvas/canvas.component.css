@@ -233,7 +233,7 @@ canvas {
   flex-shrink: 0;
   transform-origin: center center;
   transition: transform 0.1s ease-out;
-  pointer-events: none; /* Block directly, overlay handles events */
+  pointer-events: none; /* Block directly by default */
 }
 
 .canvas-wrapper {
@@ -241,12 +241,15 @@ canvas {
   display: inline-block;
   box-shadow: 0 10px 40px rgba(0,0,0,0.2);
   transform-origin: top left;
-  pointer-events: auto; /* Handle events here */
-  cursor: crosshair;
+  z-index: 10;
 }
 
-.canvas-wrapper.is-restricted {
-  cursor: not-allowed !important;
+.temp-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  pointer-events: auto !important; /* This layer captures everything */
 }
 
 .restricted-overlay {
@@ -359,12 +362,6 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
   overflow: hidden;
 }
 
-.canvas-wrapper {
-  position: relative;
-  display: inline-block;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-  transform-origin: top left;
-}
 
 .grid-overlay {
   position: absolute;
@@ -717,12 +714,6 @@ input:checked + .slider:before { transform: translateX(14px); }
   .host-closed-card h1 { font-size: 1.4rem; }
 }
 
-.temp-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-}
 
 .tool-dropdown-container {
   position: relative;

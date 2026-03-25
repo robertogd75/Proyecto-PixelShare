@@ -93,6 +93,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.resizeCanvas();
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.tempCtx.lineCap = 'round';
+    this.tempCtx.lineJoin = 'round';
   }
 
   private handleRouting(): void {
@@ -359,8 +363,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.tempCtx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
   }
 
-  @HostListener('mousemove', ['$event'])
-  @HostListener('touchmove', ['$event'])
   public draw(event: any): void {
     if (!this.isDrawing || !this.canUserDraw) return;
     if (event.type === 'touchmove') event.preventDefault();
@@ -428,6 +430,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (this.selectedTool === 'line') {
       pixel.x = this.lastPos.x;
       pixel.y = this.lastPos.y;
+      pixel.fromX = this.startPos.x;
+      pixel.fromY = this.startPos.y;
     }
 
     this.drawShapeLocally(pixel);

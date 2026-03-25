@@ -68,6 +68,14 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     });
   }
 
+  get isDrawRestricted(): boolean {
+    return this.currentRoomId !== undefined && !this.isRoomHost && !this.allowAllDraw;
+  }
+
+  get isClearRestricted(): boolean {
+    return this.currentRoomId !== undefined && !this.isRoomHost && !this.allowAllClear;
+  }
+
   private initCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
     this.ctx = canvas.getContext('2d', { alpha: false })!;

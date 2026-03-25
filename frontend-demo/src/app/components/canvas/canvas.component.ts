@@ -1,11 +1,10 @@
-import { Component, AfterViewInit, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, AfterViewInit, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 import { ToastService } from '../../services/toast.service';
-import { ThemeService } from '../../services/theme.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -15,7 +14,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.css']
 })
-export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CanvasComponent implements OnInit, AfterViewInit {
   @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -33,33 +32,20 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   public isHostClosed = false;
   public showGrid = false;
   public isRoomHost = false;
-  public isDarkMode = false;
   public canvasWidth = 2828;  // A4 landscape: width = height * √2
   public canvasHeight = 2000;
   private lastPos: { x: number, y: number } | null = null;
-  private themeSubscription?: Subscription;
 
   constructor(
     private pixelService: PixelService,
     private route: ActivatedRoute,
     private router: Router,
-    private toastService: ToastService,
-    private themeService: ThemeService
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
-    this.isDarkMode = this.themeService.currentTheme === 'dark';
-    this.themeSubscription = this.themeService.theme$.subscribe(theme => {
-      this.isDarkMode = theme === 'dark';
-    });
-
     this.initCanvas();
-    this.setupBackNavigationGuard();
     this.handleRouting();
-  }
-
-  ngOnDestroy(): void {
-    this.themeSubscription?.unsubscribe();
   }
 
   ngAfterViewInit(): void {
@@ -293,7 +279,6 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       roomId: this.currentRoomId
     };
 
-    this.hasUnsavedChanges = true;
     this.drawPixelLocally(pixel, true);
     this.pixelService.sendPixel(pixel);
   }
@@ -328,9 +313,8 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     // Compensate line thickness so lines are always visible regardless of zoom.
     // At zoom 0.5x a 2px line renders as 1 screen pixel; at zoom 0.1x a 10px line renders as 1 screen pixel.
     const lw = Math.max(1, Math.ceil(1 / this.zoomLevel));
-      const gridColor = this.isDarkMode ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.5)';
-      return `linear-gradient(${gridColor} ${lw}px, transparent ${lw}px),
-        linear-gradient(90deg, ${gridColor} ${lw}px, transparent ${lw}px)`;
+    return `linear-gradient(rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px),
+            linear-gradient(90deg, rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px)`;
   }
 
   public toggleGrid(): void {
@@ -340,27 +324,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public showClearConfirm = false;
-  public showLeaveConfirm = false;
-  public showBackConfirm = false;
   public toolbarVisible = true;
-  public hasUnsavedChanges = false;
-
-  private allowNextBackNavigation = false;
-
-  public leaveRoom(): void {
-    this.showLeaveConfirm = true;
-  }
-
-  public cancelLeave(): void {
-    this.showLeaveConfirm = false;
-  }
-
-  public confirmLeave(): void {
-    this.showLeaveConfirm = false;
-    this.hasUnsavedChanges = false;
-    sessionStorage.removeItem('pixelshare_host_room');
-    this.router.navigate(['/']);
-  }
 
   public clearCanvas(): void {
     this.showClearConfirm = true;
@@ -371,50 +335,10 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     const canvas = this.canvasRef.nativeElement;
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-    this.hasUnsavedChanges = true;
     this.toastService.success('Pizarra borrada correctamente');
   }
 
   public cancelClear(): void {
     this.showClearConfirm = false;
-  }
-
-  private setupBackNavigationGuard(): void {
-    window.history.pushState({ pixelshareGuard: true }, '', window.location.href);
-  }
-
-  @HostListener('window:popstate', ['$event'])
-  public onBrowserBack(_event: PopStateEvent): void {
-    if (this.allowNextBackNavigation) {
-      this.allowNextBackNavigation = false;
-      return;
-    }
-
-    if (!this.hasUnsavedChanges) {
-      this.allowNextBackNavigation = true;
-      window.history.back();
-      return;
-    }
-
-    this.showBackConfirm = true;
-    window.history.pushState({ pixelshareGuard: true }, '', window.location.href);
-  }
-
-  @HostListener('window:beforeunload', ['$event'])
-  public onBeforeUnload(event: BeforeUnloadEvent): void {
-    if (!this.hasUnsavedChanges) return;
-    event.preventDefault();
-    event.returnValue = '';
-  }
-
-  public cancelBackNavigation(): void {
-    this.showBackConfirm = false;
-  }
-
-  public confirmBackNavigation(): void {
-    this.showBackConfirm = false;
-    this.allowNextBackNavigation = true;
-    this.hasUnsavedChanges = false;
-    window.history.go(-2);
   }
 }

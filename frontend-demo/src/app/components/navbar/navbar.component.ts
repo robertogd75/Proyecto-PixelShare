@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { ToastService } from '../../services/toast.service';
-import { ThemeService } from '../../services/theme.service';
-import { finalize } from 'rxjs';
+import { finalize, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -20,14 +19,6 @@ import { finalize } from 'rxjs';
 
       <div class="nav-links">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
-        <button (click)="toggleTheme()" class="nav-btn theme-toggle" [attr.aria-label]="isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'">
-          <svg *ngIf="!isDarkMode" class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3a1 1 0 0 1 1.05 1.34A7 7 0 0 0 19.66 11.74 1 1 0 0 1 21 12.79Z"/>
-          </svg>
-          <svg *ngIf="isDarkMode" class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M12 18a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0v-2a1 1 0 0 1 1-1Zm0-16a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm9 9a1 1 0 1 1 0 2h-2a1 1 0 1 1 0-2h2ZM5 11a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2h2Zm12.66 6.24 1.41 1.41a1 1 0 0 1-1.41 1.41l-1.41-1.41a1 1 0 1 1 1.41-1.41ZM7.34 6.93a1 1 0 0 1 0 1.41L5.93 9.75a1 1 0 1 1-1.41-1.41l1.41-1.41a1 1 0 0 1 1.41 0Zm12.13 0a1 1 0 0 1 0 1.41l-1.41 1.41a1 1 0 1 1-1.41-1.41l1.41-1.41a1 1 0 0 1 1.41 0ZM7.76 17.66a1 1 0 0 1-1.41 1.41l-1.41-1.41a1 1 0 0 1 1.41-1.41l1.41 1.41ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/>
-          </svg>
-        </button>
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
         <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
       </div>
@@ -64,16 +55,10 @@ import { finalize } from 'rxjs';
             </div>
             <div class="success-actions">
               <button class="btn-copy-code" (click)="copyInvitationCode()">
-                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="currentColor" d="M8 2h8a2 2 0 0 1 2 2v2h-2V4H8v12h2v2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm5 6h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2Zm0 2v10h8V10h-8Z"/>
-                </svg>
-                <span>Copiar Código</span>
+                <span>📄 Copiar Código</span>
               </button>
               <button class="btn-copy-link" (click)="copyInvitation()">
-                <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="currentColor" d="M10.59 13.41a1 1 0 0 1 0-1.41l3-3a3 3 0 0 1 4.24 4.24l-2.12 2.12a3 3 0 0 1-4.24 0 1 1 0 1 1 1.41-1.41 1 1 0 0 0 1.41 0l2.12-2.12a1 1 0 0 0-1.41-1.41l-3 3a1 1 0 0 1-1.41 0Zm2.82-2.82a1 1 0 0 1 0 1.41l-3 3a3 3 0 1 1-4.24-4.24l2.12-2.12a3 3 0 0 1 4.24 0 1 1 0 1 1-1.41 1.41 1 1 0 0 0-1.41 0L7.59 12.17a1 1 0 0 0 1.41 1.41l3-3a1 1 0 0 1 1.41 0Z"/>
-                </svg>
-                <span>Copiar Enlace</span>
+                <span>🔗 Copiar Enlace</span>
               </button>
             </div>
           </div>
@@ -96,10 +81,10 @@ import { finalize } from 'rxjs';
       justify-content: space-between;
       align-items: center;
       padding: 0 40px;
-      background: var(--navbar-bg);
+      background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
-      border-bottom: 1px solid var(--border-soft);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
       position: sticky;
       top: 0;
       z-index: 1000;
@@ -115,26 +100,16 @@ import { finalize } from 'rxjs';
     .logo-pixel {
       width: 24px;
       height: 24px;
-      background: var(--text-main);
+      background: #000;
       border-radius: 6px;
       box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
-    }
-
-    :host-context(.theme-dark) .logo-pixel {
-      background: #f5f7fa;
-      border: 1px solid rgba(255,255,255,0.2);
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 8px 18px rgba(0,0,0,0.45);
     }
 
     .logo-text {
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: -1px;
-      color: var(--text-main);
-    }
-
-    :host-context(.theme-dark) .logo-text {
-      text-shadow: 0 0 10px rgba(255,255,255,0.18);
+      color: #000;
     }
 
     .nav-links {
@@ -145,7 +120,7 @@ import { finalize } from 'rxjs';
 
     .nav-link {
       text-decoration: none;
-      color: var(--text-soft);
+      color: #666;
       font-weight: 600;
       font-size: 0.95rem;
       padding: 8px 15px;
@@ -154,8 +129,8 @@ import { finalize } from 'rxjs';
     }
 
     .nav-link:hover, .nav-link.active {
-      color: var(--text-main);
-      background: var(--panel-muted);
+      color: #000;
+      background: rgba(0, 0, 0, 0.03);
     }
 
     .nav-btn {
@@ -168,21 +143,8 @@ import { finalize } from 'rxjs';
       transition: all 0.2s;
     }
 
-    .nav-btn.primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
-    .nav-btn.secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-text); }
-    .nav-btn.theme-toggle {
-      width: 42px;
-      height: 42px;
-      padding: 0;
-      border-radius: 50%;
-      background: var(--panel-muted);
-      color: var(--text-main);
-    }
-    .theme-icon {
-      width: 20px;
-      height: 20px;
-      display: block;
-    }
+    .nav-btn.primary { background: #000; color: #fff; }
+    .nav-btn.secondary { background: #f0f0f0; color: #333; }
     .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
     /* Modal Styles */
@@ -192,7 +154,7 @@ import { finalize } from 'rxjs';
       left: 0;
       width: 100%;
       height: 100%;
-      background: var(--overlay-bg);
+      background: rgba(0, 0, 0, 0.4);
       backdrop-filter: blur(8px);
       display: flex;
       justify-content: center;
@@ -202,7 +164,7 @@ import { finalize } from 'rxjs';
     }
 
     .modal-content {
-      background: var(--panel-solid);
+      background: white;
       width: 100%;
       max-width: 450px;
       border-radius: 24px;
@@ -221,41 +183,41 @@ import { finalize } from 'rxjs';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border-soft);
+      border-bottom: 1px solid #f0f0f0;
     }
 
     .modal-header h2 { font-size: 1.25rem; font-weight: 800; margin: 0; }
-    .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-soft); }
+    .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
 
     .modal-body { padding: 30px; }
-    .description { color: var(--text-soft); margin-bottom: 25px; line-height: 1.5; }
+    .description { color: #666; margin-bottom: 25px; line-height: 1.5; }
 
     .form-group { margin-bottom: 25px; }
-    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid var(--border-soft); font-size: 1rem; font-weight: 600; transition: all 0.2s; background: var(--input-bg); color: var(--text-main); }
-    .form-group input:focus { outline: none; border-color: var(--text-main); }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #f0f0f0; font-size: 1rem; font-weight: 600; transition: all 0.2s; }
+    .form-group input:focus { outline: none; border-color: #000; }
 
     .modal-footer { display: flex; gap: 15px; margin-top: 10px; }
     .btn-cancel, .btn-submit { flex: 1; padding: 14px; border-radius: 14px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
-    .btn-cancel { background: var(--panel-muted); color: var(--text-soft); }
-    .btn-submit { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
+    .btn-cancel { background: #f8f8f8; color: #666; }
+    .btn-submit { background: #000; color: #fff; }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* Success State Styles */
     .success-content {
-      background: var(--panel-muted);
-      border: 1px solid var(--border-soft);
+      background: #fcfcfc;
+      border: 1px solid #f0f0f0;
       border-radius: 20px;
       padding: 20px;
       margin-bottom: 25px;
       text-align: center;
     }
     .code-display { margin-bottom: 20px; }
-    .code-display label { font-size: 0.75rem; font-weight: 800; color: var(--text-soft); text-transform: uppercase; }
+    .code-display label { font-size: 0.75rem; font-weight: 800; color: #aaa; text-transform: uppercase; }
     .code-value {
       font-size: 2rem;
       font-weight: 900;
-      color: var(--text-main);
+      color: #000;
       letter-spacing: 2px;
       margin-top: 5px;
     }
@@ -274,13 +236,8 @@ import { finalize } from 'rxjs';
       gap: 6px;
       transition: all 0.2s;
     }
-    .action-icon {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-    }
-    .btn-copy-code { background: var(--panel-solid); border: 1px solid var(--border-soft); color: var(--text-main); }
-    .btn-copy-link { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
+    .btn-copy-code { background: #fff; border: 1px solid #eee; color: #333; }
+    .btn-copy-link { background: #000; color: #fff; }
     .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
     /* ================================================
@@ -355,17 +312,8 @@ export class NavbarComponent {
     private router: Router,
     private pixelService: PixelService,
     private toastService: ToastService,
-    private themeService: ThemeService,
     private cdr: ChangeDetectorRef
   ) {}
-
-  get isDarkMode(): boolean {
-    return this.themeService.currentTheme === 'dark';
-  }
-
-  toggleTheme() {
-    this.themeService.toggleTheme();
-  }
 
   get modalTitle(): string {
     if (this.modalMode === 'success') return '¡Sala Creada!';
@@ -413,6 +361,7 @@ export class NavbarComponent {
         const code = this.generateSecureCode();
         this.pixelService.createRoom({ code, name: this.roomName })
           .pipe(
+            timeout(10000),
             finalize(() => {
               this.isCreating = false;
               this.cdr.detectChanges();
@@ -432,21 +381,12 @@ export class NavbarComponent {
             error: (err) => {
               console.error('Room creation error:', err);
               let errMsg = 'Hubo un error al crear la sala.';
-              // Mostrar mensaje real del backend si existe
-              if (err?.error && typeof err.error === 'string') {
-                errMsg = err.error;
-              } else if (err?.error && err.error.message) {
-                errMsg = err.error.message;
-              } else if (err.message) {
-                errMsg = err.message;
-              } else if (err.name === 'TimeoutError') {
+              if (err.name === 'TimeoutError') {
                 errMsg = 'El servidor tardó demasiado en responder.';
-              } else if (err.status === 502 || err.status === 503 || err.status === 504 || err.status === 0) {
-                errMsg = 'No se puede conectar con el servidor en este momento.';
               } else if (err.status) {
-                errMsg += ` (Error ${err.status})`;
+                errMsg += ` (Error ${err.status}: ${err.statusText || 'Servidor no disponible'})`;
               }
-              this.toastService.error(errMsg, 8000);
+              this.toastService.error(errMsg, 5000);
               this.cdr.detectChanges();
             }
           });

@@ -1,42 +1,17 @@
 services:
-  mysql:
-    image: mysql:8.0
-    restart: unless-stopped
-    environment:
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-pixeldb}
-      - MYSQL_USER=${MYSQL_USER:-pixelshare}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-change_me_db_password}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-change_me_root_password}
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${MYSQL_USER:-pixelshare}", "-p${MYSQL_PASSWORD:-change_me_db_password}"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 30s
-
   backend:
     build: .
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-    ports:
-      - "${BACKEND_PORT:-8083}:8083"
+    network_mode: host
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/pixeldb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=10000&socketTimeout=30000
-      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER:-pixelshare}
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD:-change_me_db_password}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/pixeldb?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=rgardelserver75
       - SERVER_PORT=8083
 
   frontend:
     build: ./frontend-demo
-    restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-8888}:80"
+      - "8888:80"
     depends_on:
       - backend
-
-volumes:
-  mysql_data:
+    # Note: frontend nginx.conf needs to point to localhost:8083

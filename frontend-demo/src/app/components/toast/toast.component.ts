@@ -39,11 +39,11 @@ import { Subscription } from 'rxjs';
       min-width: 300px;
       padding: 16px 20px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--panel-solid) 88%, transparent);
+      background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      border: 1px solid var(--border-soft);
+      border: 1px solid rgba(255, 255, 255, 0.3);
       display: flex;
       align-items: center;
       gap: 15px;
@@ -74,7 +74,7 @@ import { Subscription } from 'rxjs';
     .toast-message {
       font-size: 0.95rem;
       font-weight: 600;
-      color: var(--text-main);
+      color: #333;
     }
   `]
 })

@@ -3,10 +3,10 @@ services:
     build: .
     network_mode: host
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/pixeldb?createDatabaseIfNotExist=true
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=rgardelserver75
-      - SERVER_PORT=8083
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:mysql://localhost:3306/pixeldb?createDatabaseIfNotExist=true}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SERVER_PORT=${SERVER_PORT:-8083}
 
   frontend:
     build: ./frontend-demo

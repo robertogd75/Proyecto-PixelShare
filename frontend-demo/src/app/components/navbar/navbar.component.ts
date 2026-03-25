@@ -432,14 +432,21 @@ export class NavbarComponent {
             error: (err) => {
               console.error('Room creation error:', err);
               let errMsg = 'Hubo un error al crear la sala.';
-              if (err.name === 'TimeoutError') {
+              // Mostrar mensaje real del backend si existe
+              if (err?.error && typeof err.error === 'string') {
+                errMsg = err.error;
+              } else if (err?.error && err.error.message) {
+                errMsg = err.error.message;
+              } else if (err.message) {
+                errMsg = err.message;
+              } else if (err.name === 'TimeoutError') {
                 errMsg = 'El servidor tardó demasiado en responder.';
               } else if (err.status === 502 || err.status === 503 || err.status === 504 || err.status === 0) {
                 errMsg = 'No se puede conectar con el servidor en este momento.';
               } else if (err.status) {
                 errMsg += ` (Error ${err.status})`;
               }
-              this.toastService.error(errMsg, 5000);
+              this.toastService.error(errMsg, 8000);
               this.cdr.detectChanges();
             }
           });

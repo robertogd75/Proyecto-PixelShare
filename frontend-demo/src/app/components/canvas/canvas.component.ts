@@ -21,8 +21,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   private ctx!: CanvasRenderingContext2D;
   private tempCtx!: CanvasRenderingContext2D;
-  private isDrawing = false;
-  protected currentRoomId: number | undefined = undefined;
+  public isDrawing = false;
+  public currentRoomId: number | undefined = undefined;
 
   public currentColor = '#000000';
   public brushSize = 5;

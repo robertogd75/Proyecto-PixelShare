@@ -52,6 +52,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public allowAllDraw = false;
   public allowAllClear = false;
   public showSettingsMenu = false;
+  public showToolMenu = false;
 
   get canUserDraw(): boolean {
     return this.currentRoomId === undefined || this.isRoomHost || this.allowAllDraw;
@@ -296,6 +297,17 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public toggleSettingsMenu(): void {
     this.showSettingsMenu = !this.showSettingsMenu;
+    if (this.showSettingsMenu) this.showToolMenu = false;
+  }
+
+  public toggleToolMenu(): void {
+    this.showToolMenu = !this.showToolMenu;
+    if (this.showToolMenu) this.showSettingsMenu = false;
+  }
+
+  public selectTool(tool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle'): void {
+    this.selectedTool = tool;
+    this.showToolMenu = false;
   }
 
   public updateRoomSettings(): void {

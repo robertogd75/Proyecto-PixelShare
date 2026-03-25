@@ -1,9 +1,12 @@
 services:
   backend:
     build: .
-    network_mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8083:8083"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/pixeldb?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/pixeldb?createDatabaseIfNotExist=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=rgardelserver75
       - SERVER_PORT=8083

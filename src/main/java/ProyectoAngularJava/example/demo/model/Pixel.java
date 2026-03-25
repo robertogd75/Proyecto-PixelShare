@@ -42,4 +42,10 @@ public class Pixel {
 
     @Transient
     private Integer fromY; // Previous Y position for line segment drawing (not persisted)
+
+    @Transient
+    private boolean allowAllDraw; // For SETTINGS_UPDATE messages
+
+    @Transient
+    private boolean allowAllClear; // For SETTINGS_UPDATE messages
 }

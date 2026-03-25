@@ -9,7 +9,12 @@
       <div class="info-group">
         <div class="info-item">
           <span class="label">SALA</span>
-          <span class="value">{{ currentRoomName }}</span>
+          <div class="value-with-settings">
+            <span class="value">{{ currentRoomName }}</span>
+            <button class="btn-room-settings" *ngIf="isRoomHost" (click)="toggleSettingsMenu()" title="Ajustes de sala">
+              ⚙️
+            </button>
+          </div>
         </div>
         <div class="info-item">
           <span class="label">CÓDIGO</span>
@@ -19,11 +24,38 @@
 
       <div class="invite-actions">
         <button class="btn-invite-pill code" (click)="copyInviteCode()">
-          <span>📄 Copiar Código</span>
+          <span>📄 Código</span>
         </button>
         <button class="btn-invite-pill link" (click)="copyInviteUrl()">
-          <span>🔗 Copiar Enlace</span>
+          <span>🔗 Enlace</span>
         </button>
+        <button class="btn-leave-pill" (click)="leaveRoom()">
+          <span>🚪 Salir</span>
+        </button>
+      </div>
+
+      <!-- Host Settings Dropdown -->
+      <div class="settings-dropdown" *ngIf="showSettingsMenu && isRoomHost">
+        <div class="settings-header">
+          <span>Ajustes de Sala</span>
+          <button class="btn-close-settings" (click)="toggleSettingsMenu()">✕</button>
+        </div>
+        <div class="settings-body">
+          <div class="setting-item">
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="allowAllDraw" (change)="updateRoomSettings()">
+              <span class="slider"></span>
+            </label>
+            <span>Permitir que todos pinten</span>
+          </div>
+          <div class="setting-item">
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="allowAllClear" (change)="updateRoomSettings()">
+              <span class="slider"></span>
+            </label>
+            <span>Permitir que todos limpien</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

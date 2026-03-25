@@ -26,4 +26,7 @@ public class Room {
     private Integer width = 5000;
     private Integer height = 5000;
     private Integer maxParticipants = 100;
+
+    private boolean allowAllDraw = false;
+    private boolean allowAllClear = false;
 }

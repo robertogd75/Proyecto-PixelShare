@@ -43,6 +43,18 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     private toastService: ToastService
   ) {}
 
+  public allowAllDraw = false;
+  public allowAllClear = false;
+  public showSettingsMenu = false;
+
+  get canUserDraw(): boolean {
+    return this.currentRoomId === undefined || this.isRoomHost || this.allowAllDraw;
+  }
+
+  get canUserClear(): boolean {
+    return this.currentRoomId === undefined || this.isRoomHost || this.allowAllClear;
+  }
+
   ngOnInit(): void {
     this.initCanvas();
     this.handleRouting();
@@ -181,6 +193,12 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         this.isHostClosed = true;
         this.toastService.info('El anfitrión ha cerrado la sala.', 5000);
         setTimeout(() => this.router.navigate(['/']), 4000);
+      } else if (pixel.type === 'SETTINGS_UPDATE') {
+        this.allowAllDraw = !!pixel.allowAllDraw;
+        this.allowAllClear = !!pixel.allowAllClear;
+        if (!this.isRoomHost) {
+            this.toastService.info('Ajustes de sala actualizados por el anfitrión.');
+        }
       } else if (pixel.type === 'RESIZE' && pixel.width && pixel.height) {
         this.canvasWidth = pixel.width;
         this.canvasHeight = pixel.height;
@@ -249,7 +267,33 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     document.body.removeChild(textArea);
   }
 
+  public leaveRoom(): void {
+    this.router.navigate(['/']);
+  }
+
+  public toggleSettingsMenu(): void {
+    this.showSettingsMenu = !this.showSettingsMenu;
+  }
+
+  public updateRoomSettings(): void {
+    if (!this.isRoomHost || this.currentRoomId === undefined) return;
+    
+    const settingsMsg: Pixel = {
+      x: 0, y: 0, color: '',
+      type: 'SETTINGS_UPDATE',
+      roomId: this.currentRoomId,
+      allowAllDraw: this.allowAllDraw,
+      allowAllClear: this.allowAllClear
+    };
+    this.pixelService.sendPixel(settingsMsg);
+    this.toastService.success('Ajustes guardados');
+  }
+
   public startDrawing(event: any): void {
+    if (!this.canUserDraw) {
+        this.toastService.info('El anfitrión ha restringido el dibujo a esta sala.');
+        return;
+    }
     this.isDrawing = true;
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
@@ -271,7 +315,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   @HostListener('mousemove', ['$event'])
   @HostListener('touchmove', ['$event'])
   public draw(event: any): void {
-    if (!this.isDrawing) return;
+    if (!this.isDrawing || !this.canUserDraw) return;
     if (event.type === 'touchmove') event.preventDefault();
 
     const canvas = this.canvasRef.nativeElement;
@@ -345,6 +389,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public toolbarVisible = true;
 
   public clearCanvas(): void {
+    if (!this.canUserClear) {
+        this.toastService.info('El anfitrión ha restringido la limpieza de pizarra.');
+        return;
+    }
     this.showClearConfirm = true;
   }
 

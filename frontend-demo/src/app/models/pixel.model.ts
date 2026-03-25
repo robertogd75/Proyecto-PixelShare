@@ -10,4 +10,6 @@ export interface Pixel {
     type?: string; // For control messages like 'HOST_CLOSED', 'RESIZE'
     width?: number;  // Used in RESIZE messages
     height?: number; // Used in RESIZE messages
+    allowAllDraw?: boolean;  // For SETTINGS_UPDATE
+    allowAllClear?: boolean; // For SETTINGS_UPDATE
 }

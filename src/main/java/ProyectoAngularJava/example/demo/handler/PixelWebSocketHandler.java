@@ -37,6 +37,9 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     // Map of roomId -> sessionId of the host (first one to join)
     private final Map<Long, String> roomHostSessionId = new ConcurrentHashMap<>();
 
+    private final Map<Long, Boolean> roomAllowAllDraw = new ConcurrentHashMap<>();
+    private final Map<Long, Boolean> roomAllowAllClear = new ConcurrentHashMap<>();
+
     public PixelWebSocketHandler(PixelRepository pixelRepository, RoomRepository roomRepository) {
         this.pixelRepository = pixelRepository;
         this.roomRepository = roomRepository;
@@ -59,12 +62,26 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                     roomParticipants.merge(roomId, 1, (oldV, newV) -> oldV + newV);
                     
                     // Assign host if none exists for this room
-                    roomHostSessionId.putIfAbsent(roomId, session.getId());
+                    if (roomHostSessionId.putIfAbsent(roomId, session.getId()) == null) {
+                        // If this session just became host, load initial settings from DB if not already in memory
+                        roomRepository.findById(roomId).ifPresent(room -> {
+                            roomAllowAllDraw.putIfAbsent(roomId, room.isAllowAllDraw());
+                            roomAllowAllClear.putIfAbsent(roomId, room.isAllowAllClear());
+                        });
+                    }
                     
                     // Room is active, remove from cleanup list
                     emptyRoomsSince.remove(roomId);
                     System.out.println("Session " + session.getId() + " joined room " + roomId + 
                                      (session.getId().equals(roomHostSessionId.get(roomId)) ? " (HOST)" : ""));
+                    
+                    // Send current settings to the new joiner
+                    Pixel settingsMsg = new Pixel();
+                    settingsMsg.setType("SETTINGS_UPDATE");
+                    settingsMsg.setRoomId(roomId);
+                    settingsMsg.setAllowAllDraw(roomAllowAllDraw.getOrDefault(roomId, false));
+                    settingsMsg.setAllowAllClear(roomAllowAllClear.getOrDefault(roomId, false));
+                    session.sendMessage(new TextMessage(objectMapper.writeValueAsString(settingsMsg)));
                 }
             }
         } catch (Exception e) {
@@ -86,6 +103,8 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                 roomHostSessionId.remove(roomId);
                 roomParticipants.remove(roomId);
                 emptyRoomsSince.remove(roomId);
+                roomAllowAllDraw.remove(roomId);
+                roomAllowAllClear.remove(roomId);
                 
                 // Broadcast "HOST_CLOSED" to remaining sessions in this room
                 Pixel closeMsg = new Pixel();
@@ -140,6 +159,8 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                     try {
                         roomRepository.deleteById(roomId);
                         System.out.println("Room " + roomId + " deleted after grace period.");
+                        roomAllowAllDraw.remove(roomId);
+                        roomAllowAllClear.remove(roomId);
                         it.remove();
                     } catch (Exception e) {
                         System.err.println("Error cleaning up room " + roomId + ": " + e.getMessage());
@@ -152,12 +173,41 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull TextMessage message) throws Exception {
         Pixel pixel = objectMapper.readValue(message.getPayload(), Pixel.class);
+        Long roomId = pixel.getRoomId();
+        String sessionId = session.getId();
         
-        // Only save to DB if it's not a real-time control message
-        // Drawing pixels are NOT persisted here to avoid lag — persistence is handled separately
-        boolean isControlMessage = pixel.getType() != null;
-        if (!isControlMessage && pixel.getRoomId() != null) {
-            pixelRepository.save(pixel);
+        // Check permissions
+        boolean isHost = roomId != null && sessionId.equals(roomHostSessionId.get(roomId));
+        
+        if ("SETTINGS_UPDATE".equals(pixel.getType())) {
+            if (isHost && roomId != null) {
+                // Update in-memory settings
+                roomAllowAllDraw.put(roomId, pixel.isAllowAllDraw());
+                roomAllowAllClear.put(roomId, pixel.isAllowAllClear());
+                
+                // Update in database
+                roomRepository.findById(roomId).ifPresent(room -> {
+                    room.setAllowAllDraw(pixel.isAllowAllDraw());
+                    room.setAllowAllClear(pixel.isAllowAllClear());
+                    roomRepository.save(room);
+                });
+                
+                System.out.println("Settings updated for room " + roomId + ": Draw=" + pixel.isAllowAllDraw() + ", Clear=" + pixel.isAllowAllClear());
+            } else {
+                return; // Ignore setting updates from non-hosts
+            }
+        } else if ("CLEAR".equals(pixel.getType())) {
+            boolean canClear = isHost || (roomId != null && roomAllowAllClear.getOrDefault(roomId, false));
+            if (!canClear) return;
+        } else if (pixel.getType() == null) {
+            // Drawing pixel
+            boolean canDraw = roomId == null || isHost || roomAllowAllDraw.getOrDefault(roomId, false);
+            if (!canDraw) return;
+            
+            // Only save to DB if it's not a real-time control message
+            if (roomId != null) {
+                pixelRepository.save(pixel);
+            }
         }
         
         String broadcastMessage = objectMapper.writeValueAsString(pixel);
@@ -166,8 +216,8 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
             for (WebSocketSession s : sessions) {
                 if (s.isOpen()) {
                     Long sRoomId = sessionRoomId.get(s.getId());
-                    boolean sameRoom = (pixel.getRoomId() == null && sRoomId == null) || 
-                                     (pixel.getRoomId() != null && pixel.getRoomId().equals(sRoomId));
+                    boolean sameRoom = (roomId == null && sRoomId == null) || 
+                                     (roomId != null && roomId.equals(sRoomId));
                     
                     if (sameRoom) {
                         try {

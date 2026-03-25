@@ -63,11 +63,12 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-    this.initCanvas();
+    this.currentColor = '#000000';
     this.handleRouting();
   }
 
   ngAfterViewInit(): void {
+    this.initCanvas();
     // DOM is fully rendered here — clientHeight is now accurate
     requestAnimationFrame(() => {
       this.fitZoom();
@@ -465,7 +466,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     this.ctx.beginPath();
     if (isLocal) {
-      // Local: use the tracked lastPos for connection
+      // Local: use current drawing path
       if (this.lastPos) {
         this.ctx.moveTo(this.lastPos.x, this.lastPos.y);
         this.ctx.lineTo(pixel.x, pixel.y);
@@ -475,7 +476,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       }
       this.lastPos = { x: pixel.x, y: pixel.y };
     } else {
-      // Remote: use fromX/fromY only if they are actual numbers (not null/undefined)
+      // Remote: use provided start point
       if (pixel.fromX != null && pixel.fromY != null) {
         this.ctx.moveTo(pixel.fromX, pixel.fromY);
         this.ctx.lineTo(pixel.x, pixel.y);
@@ -536,11 +537,31 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private getEventPos(event: any): { x: number, y: number } {
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
-    const clientX = event.clientX || event.touches?.[0]?.clientX;
-    const clientY = event.clientY || event.touches?.[0]?.clientY;
+    
+    // Get client coordinates for both mouse and touch
+    let clientX: number;
+    let clientY: number;
+
+    if (event.touches && event.touches.length > 0) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else if (event.changedTouches && event.changedTouches.length > 0) {
+      clientX = event.changedTouches[0].clientX;
+      clientY = event.changedTouches[0].clientY;
+    } else {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    }
+
+    // Ratio-based coordinate calculation (Ultra-robust)
+    // We calculate the percentage of where the user clicked within the VISUAL element
+    // and then apply that percentage to the NATIVE canvas resolution.
+    const relX = (clientX - rect.left) / rect.width;
+    const relY = (clientY - rect.top) / rect.height;
+
     return {
-      x: Math.floor((clientX - rect.left) / this.zoomLevel),
-      y: Math.floor((clientY - rect.top) / this.zoomLevel)
+      x: Math.floor(relX * canvas.width),
+      y: Math.floor(relY * canvas.height)
     };
   }
 }

@@ -8,7 +8,8 @@
   display: flex;
   flex-direction: column;
   z-index: 10;
-  overflow: hidden; /* Canvas viewport handles its own scroll */
+  overflow: hidden;
+  /* Canvas viewport handles its own scroll */
 }
 
 .canvas-header {
@@ -28,7 +29,7 @@
   font-size: 1.6rem;
   margin: 0;
   pointer-events: auto;
-  text-shadow: 0 2px 10px rgba(255,255,255,0.8);
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.8);
 }
 
 /* Room Info Badge */
@@ -36,12 +37,12 @@
   background: white;
   padding: 10px 25px;
   border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   display: flex;
   gap: 30px;
   align-items: center;
   pointer-events: auto;
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .info-group {
@@ -93,12 +94,19 @@
   gap: 8px;
 }
 
-.btn-invite-pill.code { background: #f5f5f5; color: #444; }
-.btn-invite-pill.link { background: #000; color: #fff; }
+.btn-invite-pill.code {
+  background: #f5f5f5;
+  color: #444;
+}
+
+.btn-invite-pill.link {
+  background: #000;
+  color: #fff;
+}
 
 .btn-invite-pill:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .btn-leave-pill {
@@ -155,8 +163,8 @@
   background: white;
   width: 280px;
   border-radius: 18px;
-  box-shadow: 0 15px 50px rgba(0,0,0,0.25);
-  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   z-index: 2000;
   animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
@@ -199,8 +207,15 @@
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .canvas-viewport {
@@ -208,7 +223,8 @@
   overflow: auto;
   display: block;
   z-index: 50;
-  background: #343a40; /* Darker background to make white canvas pop */
+  background: #343a40;
+  /* Darker background to make white canvas pop */
   border-top: 1px solid #222;
 }
 
@@ -225,20 +241,18 @@
 }
 
 canvas {
-  background-color: white;
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.2);
   cursor: crosshair;
   touch-action: none;
   flex-shrink: 0;
-  transform-origin: center center;
-  transition: transform 0.1s ease-out;
+  display: block;
 }
 
 .canvas-wrapper {
   position: relative;
-  display: inline-block;
+  display: block;
+  margin: 0 auto;
   box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-  transform-origin: top left;
 }
 
 .temp-canvas {
@@ -247,11 +261,13 @@ canvas {
   left: 0;
   pointer-events: none !important;
   z-index: 5;
+  background-color: transparent !important;
 }
 
 #canvasElement {
   pointer-events: auto !important;
   z-index: 1;
+  background-color: white;
 }
 
 .restricted-overlay {
@@ -316,6 +332,7 @@ canvas {
   box-shadow: 0 4px 18px rgba(255, 99, 72, 0.5);
   transition: transform 0.2s, box-shadow 0.2s;
 }
+
 .btn-floating-toggle:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 24px rgba(255, 99, 72, 0.65);
@@ -338,14 +355,47 @@ canvas {
   transition: background 0.2s, color 0.2s;
   margin-right: 4px;
 }
-.btn-close-toolbar:hover { background: rgba(0,0,0,0.07); color: #333; }
 
-.tool-group { display: flex; align-items: center; gap: 12px; }
-.tool-label { font-size: 0.75rem; font-weight: 800; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-.tool-value { font-size: 0.85rem; font-weight: 700; color: #333; min-width: 45px; }
+.btn-close-toolbar:hover {
+  background: rgba(0, 0, 0, 0.07);
+  color: #333;
+}
 
-input[type="color"] { border: none; width: 35px; height: 35px; border-radius: 10px; cursor: pointer; background: none; }
-input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tool-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tool-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #333;
+  min-width: 45px;
+}
+
+input[type="color"] {
+  border: none;
+  width: 35px;
+  height: 35px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: none;
+}
+
+input[type="range"] {
+  width: 120px;
+  cursor: pointer;
+  accent-color: #000;
+}
 
 .btn-clear {
   background: #ff4757;
@@ -367,7 +417,10 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
 
 .grid-overlay {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -380,44 +433,68 @@ input[type="range"] { width: 120px; cursor: pointer; accent-color: #000; }
 
 /* Size Menu Styles */
 .nav-select {
-  background: rgba(255,255,255,0.9);
-  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   padding: 4px 8px;
   font-size: 14px;
   cursor: pointer;
   outline: none;
 }
-.nav-select:hover { border-color: #000; }
+
+.nav-select:hover {
+  border-color: #000;
+}
 
 /* Switch UI */
-.grid-toggle { gap: 8px !important; }
+.grid-toggle {
+  gap: 8px !important;
+}
+
 .switch {
   position: relative;
   display: inline-block;
   width: 34px;
   height: 20px;
 }
-.switch input { opacity: 0; width: 0; height: 0; }
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: #ddd;
   transition: .4s;
   border-radius: 20px;
 }
+
 .slider:before {
   position: absolute;
   content: "";
-  height: 14px; width: 14px;
-  left: 3px; bottom: 3px;
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
   background-color: white;
   transition: .4s;
   border-radius: 50%;
 }
-input:checked + .slider { background-color: #000; }
-input:checked + .slider:before { transform: translateX(14px); }
+
+input:checked+.slider {
+  background-color: #000;
+}
+
+input:checked+.slider:before {
+  transform: translateX(14px);
+}
 
 /* Clear Confirmation Overlay */
 .confirm-overlay {
@@ -569,9 +646,37 @@ input:checked + .slider:before { transform: translateX(14px); }
   animation: loadProgress 4s linear forwards;
 }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@keyframes loadProgress { from { width: 0%; } to { width: 100%; } }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes loadProgress {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
 
 /* ================================================
    RESPONSIVE — TABLET (769px – 1024px)
@@ -603,7 +708,9 @@ input:checked + .slider:before { transform: translateX(14px); }
     padding: 13px 22px;
   }
 
-  input[type="range"] { width: 95px; }
+  input[type="range"] {
+    width: 95px;
+  }
 }
 
 /* ================================================
@@ -670,16 +777,23 @@ input:checked + .slider:before { transform: translateX(14px); }
     -webkit-overflow-scrolling: touch;
   }
 
-  .toolbar::-webkit-scrollbar { display: none; }
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
 
-  input[type="range"] { width: 75px; }
+  input[type="range"] {
+    width: 75px;
+  }
 
   .tool-label {
     font-size: 0.62rem;
     letter-spacing: 0.4px;
   }
 
-  .tool-value { font-size: 0.8rem; min-width: 36px; }
+  .tool-value {
+    font-size: 0.8rem;
+    min-width: 36px;
+  }
 
   .btn-clear {
     padding: 8px 15px;
@@ -713,7 +827,9 @@ input:checked + .slider:before { transform: translateX(14px); }
     margin: 0 16px;
   }
 
-  .host-closed-card h1 { font-size: 1.4rem; }
+  .host-closed-card h1 {
+    font-size: 1.4rem;
+  }
 }
 
 
@@ -757,8 +873,8 @@ input:checked + .slider:before { transform: translateX(14px); }
   margin-bottom: 10px;
   background: white;
   border-radius: 15px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;

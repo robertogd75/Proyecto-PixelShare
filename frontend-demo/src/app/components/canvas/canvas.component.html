@@ -67,10 +67,11 @@
            [style.width.px]="canvasWidth * zoomLevel"
            [style.height.px]="canvasHeight * zoomLevel">
         <div class="canvas-wrapper" 
-             [style.transform]="'scale(' + zoomLevel + ')'" 
              [class.is-restricted]="isDrawRestricted">
           <canvas #canvasElement
-                  style="pointer-events: auto;"
+                  [style.width.px]="canvasWidth * zoomLevel"
+                  [style.height.px]="canvasHeight * zoomLevel"
+                  style="pointer-events: auto; display: block;"
                   (mousedown)="startDrawing($event)"
                   (mousemove)="draw($event)"
                   (mouseup)="stopDrawing()"
@@ -79,12 +80,19 @@
                   (touchmove)="draw($event)"
                   (touchend)="stopDrawing()">
           </canvas>
-          <canvas #tempCanvas class="temp-canvas" style="pointer-events: none;"></canvas>
+          <canvas #tempCanvas 
+                  [style.width.px]="canvasWidth * zoomLevel"
+                  [style.height.px]="canvasHeight * zoomLevel"
+                  class="temp-canvas" 
+                  style="pointer-events: none; display: block;">
+          </canvas>
           <div class="restricted-overlay" *ngIf="isDrawRestricted">
             <span>🔒 Pizarra restringida por el anfitrión</span>
           </div>
           <div class="grid-overlay" [class.active]="showGrid"
-               [style.background-image]="gridBackgroundImage"></div>
+               [style.background-image]="gridBackgroundImage"
+               [style.width.px]="canvasWidth * zoomLevel"
+               [style.height.px]="canvasHeight * zoomLevel"></div>
         </div>
       </div>
     </div>

@@ -10,10 +10,7 @@ services:
 
   frontend:
     build: ./frontend-demo
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - "8888:80"
+    network_mode: host
     depends_on:
       - backend
     # Note: frontend nginx.conf needs to point to localhost:8083

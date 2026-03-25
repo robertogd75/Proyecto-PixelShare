@@ -110,7 +110,7 @@ export class PixelService {
 
     private shouldUseDirectFallback(error: any): boolean {
         const status = error?.status;
-        return error?.name === 'TimeoutError' || status === 0 || status === 502 || status === 503 || status === 504;
+        return error?.name === 'TimeoutError' || status === 0 || status === 404 || status === 502 || status === 503 || status === 504;
     }
 
     private runSequential<T>(requests: Array<() => Observable<T>>): Observable<T> {

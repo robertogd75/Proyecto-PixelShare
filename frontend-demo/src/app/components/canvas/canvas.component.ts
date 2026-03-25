@@ -16,9 +16,11 @@ import { Subscription } from 'rxjs';
 })
 export class CanvasComponent implements OnInit, AfterViewInit {
   @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('tempCanvas', { static: true }) tempCanvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
   private ctx!: CanvasRenderingContext2D;
+  private tempCtx!: CanvasRenderingContext2D;
   private isDrawing = false;
   protected currentRoomId: number | undefined = undefined;
 
@@ -32,8 +34,12 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public isHostClosed = false;
   public showGrid = false;
   public isRoomHost = false;
+  public toolbarVisible = true;
   public canvasWidth = 2828;  // A4 landscape: width = height * √2
   public canvasHeight = 2000;
+  
+  public selectedTool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' = 'brush';
+  private startPos: { x: number, y: number } | null = null;
   private lastPos: { x: number, y: number } | null = null;
 
   constructor(
@@ -79,6 +85,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private initCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
     this.ctx = canvas.getContext('2d', { alpha: false })!;
+    
+    const tCanvas = this.tempCanvasRef.nativeElement;
+    this.tempCtx = tCanvas.getContext('2d')!;
+    
     this.resizeCanvas();
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -128,10 +138,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   @HostListener('window:resize')
   public resizeCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
+    const tCanvas = this.tempCanvasRef.nativeElement;
 
     if (canvas.width !== this.canvasWidth || canvas.height !== this.canvasHeight) {
       canvas.width = this.canvasWidth;
       canvas.height = this.canvasHeight;
+      tCanvas.width = this.canvasWidth;
+      tCanvas.height = this.canvasHeight;
       this.reinitCanvasSettings();
     }
     requestAnimationFrame(() => this.fitZoom());
@@ -216,6 +229,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         const canvas = this.canvasRef.nativeElement;
         this.ctx.fillStyle = 'white';
         this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (pixel.type === 'RECT' || pixel.type === 'CIRCLE' || pixel.type === 'LINE') {
+        this.drawShapeLocally(pixel);
       } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
         this.drawPixelLocally(pixel, false);
       }
@@ -299,25 +314,37 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public startDrawing(event: any): void {
     if (!this.canUserDraw) {
-        this.toastService.info('El anfitrión ha restringido el dibujo a esta sala.');
-        return;
+      this.toastService.info('El anfitrión ha restringido el dibujo a esta sala.');
+      return;
     }
-    this.isDrawing = true;
-    const canvas = this.canvasRef.nativeElement;
-    const rect = canvas.getBoundingClientRect();
-    const x = (event.clientX || event.touches?.[0]?.clientX) - rect.left;
-    const y = (event.clientY || event.touches?.[0]?.clientY) - rect.top;
 
-    this.lastPos = {
-      x: Math.floor(x / this.zoomLevel),
-      y: Math.floor(y / this.zoomLevel)
-    };
-    this.draw(event);
+    const pos = this.getEventPos(event);
+    this.isDrawing = true;
+    this.startPos = pos;
+    this.lastPos = pos;
+
+    if (this.selectedTool === 'brush' || this.selectedTool === 'eraser') {
+      this.drawPixelLocally({
+        x: pos.x,
+        y: pos.y,
+        color: this.selectedTool === 'eraser' ? '#FFFFFF' : this.currentColor,
+        size: this.brushSize,
+        roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
+      }, true);
+    }
   }
 
   public stopDrawing(): void {
+    if (!this.isDrawing) return;
+
+    if (this.selectedTool !== 'brush' && this.selectedTool !== 'eraser') {
+      this.finalizeShape();
+    }
+
     this.isDrawing = false;
     this.lastPos = null;
+    this.startPos = null;
+    this.tempCtx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
   }
 
   @HostListener('mousemove', ['$event'])
@@ -326,27 +353,92 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (!this.isDrawing || !this.canUserDraw) return;
     if (event.type === 'touchmove') event.preventDefault();
 
-    const canvas = this.canvasRef.nativeElement;
-    const rect = canvas.getBoundingClientRect();
+    const pos = this.getEventPos(event);
 
-    const clientX = event.clientX || event.touches?.[0]?.clientX;
-    const clientY = event.clientY || event.touches?.[0]?.clientY;
+    if (this.selectedTool === 'brush' || this.selectedTool === 'eraser') {
+      const pixel: Pixel = {
+        x: pos.x,
+        y: pos.y,
+        fromX: this.lastPos?.x,
+        fromY: this.lastPos?.y,
+        color: this.selectedTool === 'eraser' ? '#FFFFFF' : this.currentColor,
+        size: this.brushSize,
+        roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
+      };
+      this.drawPixelLocally(pixel, true);
+      this.lastPos = pos;
+    } else {
+      this.lastPos = pos; // Cache latest pos for finalizeShape
+      this.drawPreview(pos);
+    }
+  }
 
-    const x = Math.floor((clientX - rect.left) / this.zoomLevel);
-    const y = Math.floor((clientY - rect.top) / this.zoomLevel);
+  private drawPreview(currentPos: { x: number, y: number }): void {
+    if (!this.startPos) return;
+    this.tempCtx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+    this.tempCtx.beginPath();
+    this.tempCtx.strokeStyle = this.currentColor;
+    this.tempCtx.lineWidth = this.brushSize;
 
+    const x = this.startPos.x;
+    const y = this.startPos.y;
+    const w = currentPos.x - x;
+    const h = currentPos.y - y;
+
+    if (this.selectedTool === 'line') {
+      this.tempCtx.moveTo(x, y);
+      this.tempCtx.lineTo(currentPos.x, currentPos.y);
+    } else if (this.selectedTool === 'rect') {
+      this.tempCtx.strokeRect(x, y, w, h);
+    } else if (this.selectedTool === 'circle') {
+      const radius = Math.sqrt(w * w + h * h);
+      this.tempCtx.arc(x, y, radius, 0, 2 * Math.PI);
+    }
+    this.tempCtx.stroke();
+  }
+
+  private finalizeShape(): void {
+    if (!this.startPos || !this.lastPos || !this.canUserDraw) return;
+    
     const pixel: Pixel = {
-      x,
-      y,
-      fromX: this.lastPos?.x,
-      fromY: this.lastPos?.y,
-      color: this.currentColor,
+      x: this.startPos.x,
+      y: this.startPos.y,
+      width: this.lastPos.x - this.startPos.x,
+      height: this.lastPos.y - this.startPos.y,
+      fromX: this.startPos.x,
+      fromY: this.startPos.y,
       size: this.brushSize,
-      roomId: this.currentRoomId
+      color: this.currentColor,
+      type: this.selectedTool.toUpperCase(),
+      roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
     };
 
-    this.drawPixelLocally(pixel, true);
+    if (this.selectedTool === 'line') {
+      pixel.x = this.lastPos.x;
+      pixel.y = this.lastPos.y;
+    }
+
+    this.drawShapeLocally(pixel);
     this.pixelService.sendPixel(pixel);
+  }
+
+  private drawShapeLocally(pixel: Pixel): void {
+    this.ctx.beginPath();
+    this.ctx.strokeStyle = pixel.color;
+    this.ctx.lineWidth = pixel.size || 2;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    if (pixel.type === 'LINE') {
+      this.ctx.moveTo(pixel.fromX!, pixel.fromY!);
+      this.ctx.lineTo(pixel.x, pixel.y);
+    } else if (pixel.type === 'RECT') {
+      this.ctx.strokeRect(pixel.x, pixel.y, pixel.width!, pixel.height!);
+    } else if (pixel.type === 'CIRCLE') {
+      const radius = Math.sqrt(pixel.width! * pixel.width! + pixel.height! * pixel.height!);
+      this.ctx.arc(pixel.x, pixel.y, radius, 0, 2 * Math.PI);
+    }
+    this.ctx.stroke();
   }
 
   private drawPixelLocally(pixel: Pixel, isLocal: boolean): void {
@@ -394,7 +486,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public showClearConfirm = false;
-  public toolbarVisible = true;
 
   public clearCanvas(): void {
     if (!this.canUserClear) {
@@ -424,5 +515,16 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public cancelClear(): void {
     this.showClearConfirm = false;
+  }
+
+  private getEventPos(event: any): { x: number, y: number } {
+    const canvas = this.canvasRef.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = event.clientX || event.touches?.[0]?.clientX;
+    const clientY = event.clientY || event.touches?.[0]?.clientY;
+    return {
+      x: Math.floor((clientX - rect.left) / this.zoomLevel),
+      y: Math.floor((clientY - rect.top) / this.zoomLevel)
+    };
   }
 }

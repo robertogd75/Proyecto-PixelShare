@@ -171,7 +171,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull TextMessage message) throws Exception {
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         Pixel pixel = objectMapper.readValue(message.getPayload(), Pixel.class);
         Long roomId = pixel.getRoomId();
         String sessionId = session.getId();

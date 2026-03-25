@@ -76,6 +76,10 @@
                   (touchmove)="draw($event)"
                   (touchend)="stopDrawing()">
           </canvas>
+          <canvas #tempCanvas
+                  class="temp-canvas"
+                  [style.pointer-events]="isDrawing ? 'none' : 'auto'">
+          </canvas>
           <div class="restricted-overlay" *ngIf="isDrawRestricted">
             <span>🔒 Pizarra restringida por el anfitrión</span>
           </div>
@@ -95,6 +99,15 @@
 
   <div class="toolbar" [class.toolbar-hidden]="!toolbarVisible">
     <button class="btn-close-toolbar" (click)="toolbarVisible = false" title="Ocultar herramientas">✕</button>
+    
+    <div class="tool-group selector-group">
+      <button class="tool-btn" [class.active]="selectedTool === 'brush'" (click)="selectedTool = 'brush'" title="Pincel">🖌️</button>
+      <button class="tool-btn" [class.active]="selectedTool === 'eraser'" (click)="selectedTool = 'eraser'" title="Borrador">🧽</button>
+      <button class="tool-btn" [class.active]="selectedTool === 'line'" (click)="selectedTool = 'line'" title="Línea">📏</button>
+      <button class="tool-btn" [class.active]="selectedTool === 'rect'" (click)="selectedTool = 'rect'" title="Rectángulo">⬜</button>
+      <button class="tool-btn" [class.active]="selectedTool === 'circle'" (click)="selectedTool = 'circle'" title="Círculo">⭕</button>
+    </div>
+
     <div class="tool-group">
       <span class="tool-label">Color</span>
       <input type="color" [(ngModel)]="currentColor">

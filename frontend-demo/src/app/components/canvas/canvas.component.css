@@ -706,3 +706,46 @@ input:checked + .slider:before { transform: translateX(14px); }
 
   .host-closed-card h1 { font-size: 1.4rem; }
 }
+
+.temp-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.selector-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tool-btn {
+  background: #f8f8f8;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  pointer-events: auto;
+}
+
+.tool-btn:hover {
+  background: #eee;
+  transform: scale(1.05);
+}
+
+.tool-btn.active {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}

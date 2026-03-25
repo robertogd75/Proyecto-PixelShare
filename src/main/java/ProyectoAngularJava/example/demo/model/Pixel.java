@@ -27,15 +27,11 @@ public class Pixel {
     private String color;
     private Integer size;
     private Long roomId;
+    private String type; // For WebSocket control messages (e.g., "HOST_CLOSED", "RESIZE") e.g. "RECT", "CIRCLE"
 
-    @Transient
-    private String type; // For WebSocket control messages (e.g., "HOST_CLOSED", "RESIZE")
+    private Integer width; // Used in RESIZE and shape messages
 
-    @Transient
-    private Integer width; // Used in RESIZE messages
-
-    @Transient
-    private Integer height; // Used in RESIZE messages
+    private Integer height; // Used in RESIZE and shape messages
 
     @Transient
     private Integer fromX; // Previous X position for line segment drawing (not persisted)

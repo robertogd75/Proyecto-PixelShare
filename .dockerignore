@@ -1,0 +1,4 @@
+target/
+.git/
+*.md
+build_log.txt

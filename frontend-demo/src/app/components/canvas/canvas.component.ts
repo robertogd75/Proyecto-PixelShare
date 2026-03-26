@@ -5,8 +5,10 @@ import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/route
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 import { ToastService } from '../../services/toast.service';
-import { Subscription } from 'rxjs';
 import { ThemeService } from '../../services/theme.service';
+import { DownloadService } from '../../services/download.service';
+import { Subscription } from 'rxjs';
+
 
 
 @Component({
@@ -79,14 +81,24 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private toastService: ToastService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private downloadService: DownloadService
   ) {}
+
 
 
   public allowAllDraw = false;
   public allowAllClear = false;
   public showSettingsMenu = false;
   public showToolMenu = false;
+  
+  // Exit & Download States
+  public showExitConfirm = false;
+  public showDownloadMenu = false;
+  public downloadFilename = 'mi-pizarra';
+  public downloadFormat: 'png' | 'jpg' = 'png';
+  private downloadSub?: Subscription;
+
 
   get canUserDraw(): boolean {
     return this.currentRoomId === undefined || this.isRoomHost || this.allowAllDraw;
@@ -116,7 +128,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         }
       }, 0);
     });
+
+    // Handle global download requests from Navbar
+    this.downloadSub = this.downloadService.downloadRequest$.subscribe(() => {
+      this.openDownloadMenu();
+    });
   }
+
 
 
   ngAfterViewInit(): void {
@@ -353,8 +371,54 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public leaveRoom(): void {
+    // Show confirmation modal instead of leaving immediately
+    this.showExitConfirm = true;
+  }
+
+  public confirmLeave(): void {
+    this.showExitConfirm = false;
     this.router.navigate(['/']);
   }
+
+  public cancelLeave(): void {
+    this.showExitConfirm = false;
+    this.showDownloadMenu = false;
+  }
+
+  public openDownloadMenu(): void {
+    this.showDownloadMenu = true;
+  }
+
+  public downloadCanvas(): void {
+    const canvas = this.canvasRef.nativeElement;
+    
+    // Create a temporary canvas for the export (to ensure background is included)
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvas.width;
+    exportCanvas.height = canvas.height;
+    const exportCtx = exportCanvas.getContext('2d')!;
+
+    // 1. Fill background (explicitly, because the main canvas might have transparency issues in exported formats like JPG)
+    exportCtx.fillStyle = this.themeBgColor;
+    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+    // 2. Draw the main canvas content
+    exportCtx.drawImage(canvas, 0, 0);
+
+    // 3. Trigger download
+    const dataUrl = exportCanvas.toDataURL(`image/${this.downloadFormat}`, this.downloadFormat === 'jpg' ? 0.9 : 1.0);
+    const link = document.createElement('a');
+    link.download = `${this.downloadFilename}.${this.downloadFormat}`;
+    link.href = dataUrl;
+    link.click();
+
+    this.toastService.success('Dibujo descargado correctamente');
+    this.showDownloadMenu = false;
+    
+    // If we were in the middle of an exit flow, we might want to stay or leave
+    // For now, let's just close the menu as requested.
+  }
+
 
   public toggleSettingsMenu(): void {
     this.showSettingsMenu = !this.showSettingsMenu;

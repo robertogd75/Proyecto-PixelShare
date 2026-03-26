@@ -989,4 +989,143 @@ input:checked+.slider:before {
 .tool-item.active {
   background: var(--text-primary);
   color: var(--bg-card);
-}
+}
+
+/* Exit & Download Modals */
+.modal-card {
+  background: var(--bg-card);
+  width: 100%;
+  max-width: 440px;
+  border-radius: 28px;
+  padding: 35px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+@keyframes modalScaleUp {
+  from { transform: scale(0.9) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-header-simple {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.modal-icon {
+  font-size: 2rem;
+}
+
+.modal-header-simple h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.modal-text {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 1rem;
+  margin-bottom: 30px;
+}
+
+.modal-actions-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-modal {
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-modal.primary {
+  background: var(--text-primary);
+  color: var(--bg-card);
+}
+
+.btn-modal.secondary {
+  background: var(--bg-main);
+  color: var(--text-secondary);
+}
+
+.btn-modal.danger {
+  background: var(--danger-red);
+  color: white;
+}
+
+.btn-modal:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+/* Download Form */
+.download-form {
+  padding: 20px;
+  background: var(--bg-main);
+  border-radius: 20px;
+  margin-bottom: 25px;
+  border: 1px solid var(--border-color);
+}
+
+.form-group-download {
+  margin-bottom: 20px;
+}
+
+.form-group-download label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.form-group-download input {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.format-toggle {
+  display: flex;
+  gap: 10px;
+}
+
+.format-toggle button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.format-toggle button.active {
+  background: var(--text-primary);
+  color: var(--bg-card);
+  border-color: var(--text-primary);
+}
+

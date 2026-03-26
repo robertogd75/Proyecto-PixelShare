@@ -30,9 +30,10 @@
         <button class="btn-invite-pill link" (click)="copyInviteUrl()">
           <span>🔗 Enlace</span>
         </button>
-        <button class="btn-leave-pill" (click)="leaveRoom()">
-          <span>🚪 Salir</span>
+        <button class="btn-leave-pill" (click)='leaveRoom()'>
+          <span>Salir</span>
         </button>
+
       </div>
 
       <!-- Host Settings Dropdown -->
@@ -202,6 +203,52 @@
     </div>
   </div>
 
+  <!-- Exit Confirmation Modal -->
+  <div class="modal-overlay" *ngIf="showExitConfirm" (click)="cancelLeave()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header-simple">
+        <span class="modal-icon">⚠️</span>
+        <h3>¿Quieres salir de la pizarra?</h3>
+      </div>
+      <p class="modal-text">Si sales ahora, perderás el dibujo actual a menos que lo descargues.</p>
+      
+      <div class="modal-actions-box">
+        <button class="btn-modal secondary" (click)="cancelLeave()">No salir</button>
+        <button class="btn-modal danger" (click)="confirmLeave()">Salir y perder dibujo</button>
+        <button class="btn-modal primary" (click)="openDownloadMenu()">Descargar dibujo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Tool Modal -->
+  <div class="modal-overlay" *ngIf="showDownloadMenu" (click)="cancelLeave()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header-simple">
+        <span class="modal-icon">📥</span>
+        <h3>Guardar Dibujo</h3>
+      </div>
+      
+      <div class="download-form">
+        <div class="form-group-download">
+          <label>Nombre del archivo</label>
+          <input type="text" [(ngModel)]="downloadFilename" placeholder="mi-pizarra">
+        </div>
+        
+        <div class="form-group-download">
+          <label>Formato de imagen</label>
+          <div class="format-toggle">
+            <button [class.active]="downloadFormat === 'png'" (click)="downloadFormat = 'png'">PNG</button>
+            <button [class.active]="downloadFormat === 'jpg'" (click)="downloadFormat = 'jpg'">JPG</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions-box">
+        <button class="btn-modal secondary" (click)="cancelLeave()">Cancelar</button>
+        <button class="btn-modal primary" (click)="downloadCanvas()">Descargar Ahora</button>
+      </div>
+    </div>
+  </div>
   <!-- Host Closed Overlay -->
   <div class="host-closed-overlay" *ngIf="isHostClosed">
     <div class="host-closed-card">
@@ -214,3 +261,4 @@
     </div>
   </div>
 </div>
+

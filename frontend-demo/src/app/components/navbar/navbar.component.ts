@@ -6,6 +6,8 @@ import { PixelService } from '../../services/pixel.service';
 import { ToastService } from '../../services/toast.service';
 import { finalize, timeout } from 'rxjs';
 import { ThemeService } from '../../services/theme.service';
+import { DownloadService } from '../../services/download.service';
+
 
 
 @Component({
@@ -23,9 +25,11 @@ import { ThemeService } from '../../services/theme.service';
         <button class="btn-theme-toggle" (click)="themeService.toggleTheme()" [title]="themeService.currentTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'">
           <span>{{ themeService.currentTheme === 'dark' ? '☀️' : '🌙' }}</span>
         </button>
+        <button (click)="downloadService.requestDownload()" class="nav-btn secondary">📥 Descargar</button>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
         <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
+
       </div>
 
     </nav>
@@ -351,8 +355,10 @@ export class NavbarComponent {
     private pixelService: PixelService,
     private toastService: ToastService,
     private cdr: ChangeDetectorRef,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    public downloadService: DownloadService
   ) {}
+
 
 
   get modalTitle(): string {

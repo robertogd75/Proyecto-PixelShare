@@ -97,36 +97,14 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
         
         if (roomId != null && roomId > 1) { 
             // Check if this was the host
+            // Check if this was the host
             String hostSessionId = roomHostSessionId.get(roomId);
             if (sessionId.equals(hostSessionId)) {
-                System.out.println("Host left room " + roomId + ". Closing room for everyone.");
+                System.out.println("Host " + sessionId + " disconnected from room " + roomId + ". Room preserved for grace period.");
                 roomHostSessionId.remove(roomId);
-                roomParticipants.remove(roomId);
-                emptyRoomsSince.remove(roomId);
-                roomAllowAllDraw.remove(roomId);
-                roomAllowAllClear.remove(roomId);
-                
-                // Broadcast "HOST_CLOSED" to remaining sessions in this room
-                Pixel closeMsg = new Pixel();
-                closeMsg.setType("HOST_CLOSED");
-                closeMsg.setRoomId(roomId);
-                String msgJson = objectMapper.writeValueAsString(closeMsg);
-                
-                synchronized (sessions) {
-                    for (WebSocketSession s : sessions) {
-                        Long sRoomId = sessionRoomId.get(s.getId());
-                        if (roomId.equals(sRoomId) && s.isOpen() && msgJson != null) {
-                            s.sendMessage(new TextMessage(msgJson));
-                        }
-                    }
-                }
-                
-                // Delete room from database immediately
-                try {
-                    roomRepository.deleteById(roomId);
-                } catch (Exception e) {
-                    System.err.println("Error deleting room on host exit: " + e.getMessage());
-                }
+                // We no longer delete the room immediately or broadcast HOST_CLOSED
+                // This allows the host to REFRESH and rejoin as host, and friends to join.
+                // The room will be cleaned up by the @Scheduled task if it stays empty for 5 minutes.
             } else {
                 // Not the host, just decrement participant count
                 Integer current = roomParticipants.get(roomId);

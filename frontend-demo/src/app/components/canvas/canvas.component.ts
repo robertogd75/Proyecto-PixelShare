@@ -43,7 +43,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public isRoomHost = false;
   public toolbarVisible = true;
   private canvasBuffer: Uint32Array | null = null;
-  private canvasWidth = 2828;
+  public canvasWidth = 2828;
   public canvasHeight = 2000;
   
   public selectedTool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' | 'fill' = 'brush';

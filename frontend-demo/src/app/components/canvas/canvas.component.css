@@ -242,7 +242,6 @@
 
 canvas {
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.2);
-  cursor: crosshair;
   touch-action: none;
   flex-shrink: 0;
   display: block;
@@ -265,7 +264,7 @@ canvas {
 }
 
 #canvasElement {
-  pointer-events: auto !important;
+  pointer-events: none;
   z-index: 1;
   background-color: white;
 }

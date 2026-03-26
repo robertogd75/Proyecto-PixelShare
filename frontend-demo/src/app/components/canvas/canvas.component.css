@@ -424,10 +424,17 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  justify-content: flex-start;
+  gap: 8px;
+  height: 65px; /* Ensures all groups have the same total height space */
+  min-width: 60px;
 }
 
 .tool-label {
+  height: 16px; /* Fixed height for the name slot */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.65rem;
   font-weight: 800;
   color: var(--text-muted);
@@ -436,6 +443,7 @@ canvas {
   opacity: 0.8;
   line-height: 1;
 }
+
 
 
 
@@ -479,11 +487,18 @@ input[type="range"] {
   background: #ff4757;
   color: white;
   border: none;
-  padding: 10px 25px;
-  border-radius: 25px;
+  padding: 8px 18px;
+  border-radius: 12px;
   font-weight: 700;
+  font-size: 0.8rem;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  height: 35px; /* Match typical control height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 
 /* Grid Overlay Fix */
 .canvas-scaler {

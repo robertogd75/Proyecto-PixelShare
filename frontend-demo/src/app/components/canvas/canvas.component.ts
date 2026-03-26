@@ -42,7 +42,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public showGrid = false;
   public isRoomHost = false;
   public toolbarVisible = true;
-  public canvasWidth = 2828;  // A4 landscape: width = height * √2
+  private canvasBuffer: Uint32Array | null = null;
+  private canvasWidth = 2828;
   public canvasHeight = 2000;
   
   public selectedTool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' | 'fill' = 'brush';
@@ -256,12 +257,42 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.tempCtx = tCanvas.getContext('2d')!;
     
     this.resizeCanvas();
+    this.initBuffer();
     this.ctx.fillStyle = this.themeBgColor;
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     this.tempCtx.lineCap = 'round';
     this.tempCtx.lineJoin = 'round';
+  }
+
+  private colorToUint32(fillColor: string): number {
+    if (fillColor === this.lastFillColor) {
+      return this.lastTargetColor32;
+    }
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 1; tempCanvas.height = 1;
+    const tCtx = tempCanvas.getContext('2d')!;
+    tCtx.fillStyle = fillColor;
+    tCtx.fillRect(0, 0, 1, 1);
+    const data = tCtx.getImageData(0, 0, 1, 1).data;
+    const targetColor = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0];
+    this.lastFillColor = fillColor;
+    this.lastTargetColor32 = targetColor;
+    return targetColor;
+  }
+
+  private initBuffer(): void {
+    const size = this.canvasWidth * this.canvasHeight;
+    this.canvasBuffer = new Uint32Array(size);
+    // Fill buffer with background color (Correct colorInt from themeBgColor)
+    const bgColorInt = this.colorToUint32(this.themeBgColor);
+    this.canvasBuffer.fill(bgColorInt);
+  }
+
+  private updateBuffer(x: number, y: number, colorInt: number): void {
+    if (!this.canvasBuffer || x < 0 || y < 0 || x >= this.canvasWidth || y >= this.canvasHeight) return;
+    this.canvasBuffer[y * this.canvasWidth + x] = colorInt;
   }
 
   private handleRouting(): void {
@@ -323,6 +354,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       canvas.height = this.canvasHeight;
       tCanvas.width = this.canvasWidth;
       tCanvas.height = this.canvasHeight;
+      this.initBuffer(); // Re-allocate shadow buffer
       this.reinitCanvasSettings();
     }
     requestAnimationFrame(() => this.fitZoom());
@@ -402,24 +434,16 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     const process = async () => {
       const startTime = performance.now();
       
-      // Overdrive: Use a shared buffer for a batch of fills to avoid redundant GPU transfers
-      let batchImageData: ImageData | null = null;
-      let data32: Uint32Array | null = null;
+      // God-Mode: Use the persistent canvasBuffer directly
+      if (!this.canvasBuffer) { this.initBuffer(); }
       let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
       let batchModified = false;
 
-      while (index < pixels.length && performance.now() - startTime < 32) { // 32ms budget per batch
+      while (index < pixels.length && performance.now() - startTime < 32) {
         const p = pixels[index++];
         
         if (p.type === 'FILL') {
-          // Initialize batch buffer if needed
-          if (!batchImageData) {
-            batchImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            data32 = new Uint32Array(batchImageData.data.buffer);
-          }
-          
-          // Perform fill on the shared buffer
-          const result = await this.executeFloodFillOnBuffer(data32!, p.x, p.y, p.color, canvas.width, canvas.height, false);
+          const result = await this.executeFloodFillOnBuffer(this.canvasBuffer!, p.x, p.y, p.color, canvas.width, canvas.height, false);
           if (result) {
             minX = Math.min(minX, result.minX);
             minY = Math.min(minY, result.minY);
@@ -427,31 +451,31 @@ export class CanvasComponent implements OnInit, AfterViewInit {
             maxY = Math.max(maxY, result.maxY);
             batchModified = true;
           }
+        } else if (p.type === 'CLEAR') {
+          this.ctx.fillStyle = this.themeBgColor;
+          this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+          this.canvasBuffer!.fill(this.colorToUint32(this.themeBgColor));
+        } else if (p.type === 'RESIZE' && p.width && p.height) {
+          this.canvasWidth = p.width;
+          this.canvasHeight = p.height;
+          this.resizeCanvas();
         } else {
-          // Before drawing regular pixels, commit any pending fill batch
-          if (batchModified && batchImageData) {
-            ctx.putImageData(batchImageData, 0, 0, minX, minY, maxX - minX + 1, maxY - minY + 1);
-            batchModified = false; // Reset for next potential batch
-            batchImageData = null; // Re-fetch for next batch to incorporate this pixel
-            data32 = null;
-          }
-
-          if (p.type === 'CLEAR') {
-            this.ctx.fillStyle = this.themeBgColor;
-            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-          } else if (p.type === 'RESIZE' && p.width && p.height) {
-            this.canvasWidth = p.width;
-            this.canvasHeight = p.height;
-            this.resizeCanvas();
-          } else {
-            this.drawPixelLocally(p, false);
-          }
+          this.drawPixelLocally(p, false);
         }
       }
 
-      // Final commit for the current batch
-      if (batchModified && batchImageData) {
-        ctx.putImageData(batchImageData, 0, 0, minX, minY, maxX - minX + 1, maxY - minY + 1);
+      // God-Mode surgical commit: only push modified area to GPU
+      if (batchModified) {
+        const dirtyW = maxX - minX + 1;
+        const dirtyH = maxY - minY + 1;
+        
+        // Fix: Cast buffer to any then ArrayBuffer to satisfy TS environment
+        const imageData = new ImageData(
+          new Uint8ClampedArray(this.canvasBuffer!.buffer as any as ArrayBuffer), 
+          canvas.width, 
+          canvas.height
+        );
+        ctx.putImageData(imageData, 0, 0, minX, minY, dirtyW, dirtyH);
       }
 
       if (index < pixels.length) {
@@ -881,6 +905,20 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.ctx.arc(pixel.x, pixel.y, radius, 0, 2 * Math.PI);
     }
     this.ctx.stroke();
+
+    // Surgical sync for shapes
+    let x = pixel.x, y = pixel.y, w = pixel.width || 0, h = pixel.height || 0;
+    if (pixel.type === 'CIRCLE') {
+      const radius = Math.sqrt(w*w + h*h);
+      x -= radius; y -= radius; w = radius * 2; h = radius * 2;
+    } else if (pixel.type === 'LINE') {
+      x = Math.min(pixel.x, pixel.fromX!);
+      y = Math.min(pixel.y, pixel.fromY!);
+      w = Math.abs(pixel.x - pixel.fromX!);
+      h = Math.abs(pixel.y - pixel.fromY!);
+    }
+    const pad = (pixel.size || 2) + 2;
+    this.syncBufferRegion(x - pad, y - pad, w + pad * 2, h + pad * 2);
   }
 
   private drawPixelLocally(pixel: Pixel, isLocal: boolean): void {
@@ -892,8 +930,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.ctx.beginPath();
     if (isLocal) {
       this.isDirty = true;
-      // Local: use current drawing path
-
       if (this.lastPos) {
         this.ctx.moveTo(this.lastPos.x, this.lastPos.y);
         this.ctx.lineTo(pixel.x, pixel.y);
@@ -903,7 +939,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       }
       this.lastPos = { x: pixel.x, y: pixel.y };
     } else {
-      // Remote: use provided start point
       if (pixel.fromX != null && pixel.fromY != null) {
         this.ctx.moveTo(pixel.fromX, pixel.fromY);
         this.ctx.lineTo(pixel.x, pixel.y);
@@ -913,7 +948,44 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       }
     }
     this.ctx.stroke();
+
+    // Surgical sync: update only the bounding box of this specific stroke/pixel
+    const pad = (pixel.size || 5) + 2;
+    const x = Math.min(pixel.x, pixel.fromX ?? pixel.x) - pad;
+    const y = Math.min(pixel.y, pixel.fromY ?? pixel.y) - pad;
+    const w = Math.abs(pixel.x - (pixel.fromX ?? pixel.x)) + pad * 2;
+    const h = Math.abs(pixel.y - (pixel.fromY ?? pixel.y)) + pad * 2;
+    this.syncBufferRegion(x, y, w, h);
   }
+
+  private syncBufferRegion(x: number, y: number, w: number, h: number): void {
+    if (!this.canvasBuffer) return;
+    const canvas = this.canvasRef.nativeElement;
+    
+    // Clamp to canvas boundaries
+    const startX = Math.max(0, Math.floor(x));
+    const startY = Math.max(0, Math.floor(y));
+    const endX = Math.min(canvas.width, Math.ceil(x + w));
+    const endY = Math.min(canvas.height, Math.ceil(y + h));
+    const finalW = endX - startX;
+    const finalH = endY - startY;
+
+    if (finalW <= 0 || finalH <= 0) return;
+
+    try {
+      const regionData = this.ctx.getImageData(startX, startY, finalW, finalH);
+      const region32 = new Uint32Array(regionData.data.buffer);
+      
+      for (let row = 0; row < finalH; row++) {
+        const targetOffset = (startY + row) * this.canvasWidth + startX;
+        const sourceOffset = row * finalW;
+        this.canvasBuffer.set(region32.subarray(sourceOffset, sourceOffset + finalW), targetOffset);
+      }
+    } catch (e) {
+      console.warn("Surgical sync failed", e);
+    }
+  }
+
 
   get gridBackgroundImage(): string {
     // Compensate line thickness so lines are always visible regardless of zoom.
@@ -946,6 +1018,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     this.ctx.fillStyle = this.themeBgColor;
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (this.canvasBuffer) {
+      this.canvasBuffer.fill(this.colorToUint32(this.themeBgColor));
+    }
     this.toastService.success('Pizarra borrada correctamente');
 
     // Broadcast clear to all room participants
@@ -990,14 +1065,21 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       try {
         const width = canvas.width;
         const height = canvas.height;
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data32 = new Uint32Array(imageData.data.buffer);
+        if (!this.canvasBuffer) { this.initBuffer(); }
 
-        const result = await this.executeFloodFillOnBuffer(data32, startX, startY, fillColor, width, height, true);
+        // God-Mode: Use the persistent shadow buffer directly. No getImageData!
+        const result = await this.executeFloodFillOnBuffer(this.canvasBuffer!, startX, startY, fillColor, width, height, true);
         
         if (result) {
           const dirtyW = result.maxX - result.minX + 1;
           const dirtyH = result.maxY - result.minY + 1;
+          
+          // God-Mode: surgical commit
+          const imageData = new ImageData(
+            new Uint8ClampedArray(this.canvasBuffer!.buffer as any as ArrayBuffer), 
+            width, 
+            height
+          );
           ctx.putImageData(imageData, 0, 0, result.minX, result.minY, dirtyW, dirtyH);
           this.isDirty = true;
         }

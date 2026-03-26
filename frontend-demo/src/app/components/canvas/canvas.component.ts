@@ -58,9 +58,15 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   /** Pixel size of the brush preview circle in screen pixels */
   get cursorSize(): number { return Math.max(8, this.brushSize * this.zoomLevel); }
 
+  /** Base background color for the canvas based on theme */
+  get themeBgColor(): string {
+    return this.darkMode ? '#000000' : '#ffffff';
+  }
+
   /** Cursor border color: contrast ring so it's always visible on any background */
   get cursorBorderColor(): string {
-    return this.selectedTool === 'eraser' ? '#666' : this.currentColor;
+    if (this.selectedTool === 'eraser') return this.darkMode ? '#fff' : '#666';
+    return this.darkMode ? '#fff' : this.currentColor;
   }
 
   constructor(
@@ -113,7 +119,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.tempCtx = tCanvas.getContext('2d')!;
     
     this.resizeCanvas();
-    this.ctx.fillStyle = 'white';
+    this.ctx.fillStyle = this.themeBgColor;
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
@@ -330,6 +336,12 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.darkMode = !this.darkMode;
     localStorage.setItem('pixelshare-theme', this.darkMode ? 'dark' : 'light');
     
+    // Update the actual canvas background if it's currently base color
+    // This is a simple refill to meet the user's "black board" requirement
+    const canvas = this.canvasRef.nativeElement;
+    this.ctx.fillStyle = this.themeBgColor;
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     // If switching to dark mode and color is black, switch to white for better visibility
     if (this.darkMode && this.currentColor === '#000000') {
       this.currentColor = '#ffffff';
@@ -458,7 +470,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         y: pos.y,
         fromX: this.lastPos?.x,
         fromY: this.lastPos?.y,
-        color: this.selectedTool === 'eraser' ? '#FFFFFF' : this.currentColor,
+        color: this.selectedTool === 'eraser' ? this.themeBgColor : this.currentColor,
         size: this.brushSize,
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       };
@@ -597,7 +609,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public confirmClear(): void {
     this.showClearConfirm = false;
     const canvas = this.canvasRef.nativeElement;
-    this.ctx.fillStyle = 'white';
+    this.ctx.fillStyle = this.themeBgColor;
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
     this.toastService.success('Pizarra borrada correctamente');
 

@@ -70,10 +70,7 @@
              [class.is-restricted]="isDrawRestricted"
              [style.cursor]="canvasCursor"
              (mousedown)="startDrawing($event)"
-             (mousemove)="draw($event); onCanvasMouseMove($event)"
              (mouseup)="stopDrawing()"
-             (mouseenter)="cursorVisible = true"
-             (mouseleave)="cancelDrawing()"
              (touchstart)="startDrawing($event)"
              (touchmove)="draw($event)"
              (touchend)="stopDrawing()">

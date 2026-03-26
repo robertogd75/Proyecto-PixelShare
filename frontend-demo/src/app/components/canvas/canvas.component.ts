@@ -379,12 +379,31 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.tempCtx?.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
   }
 
-  /** Track cursor position for the brush preview indicator */
-  public onCanvasMouseMove(event: MouseEvent): void {
-    const wrapper = (event.currentTarget as HTMLElement);
-    const rect = wrapper.getBoundingClientRect();
-    this.cursorX = event.clientX - rect.left;
-    this.cursorY = event.clientY - rect.top;
+  /** Single window-level mousemove handler with explicit canvas bounds checking */
+  @HostListener('window:mousemove', ['$event'])
+  onWindowMouseMove(event: MouseEvent): void {
+    const canvas = this.canvasRef.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
+                   event.clientY >= rect.top  && event.clientY <= rect.bottom;
+
+    // Update cursor preview
+    this.cursorVisible = inside;
+    if (inside) {
+      this.cursorX = event.clientX - rect.left;
+      this.cursorY = event.clientY - rect.top;
+    }
+
+    // Auto-stop drawing when leaving canvas bounds
+    if (!inside && this.isDrawing) {
+      this.cancelDrawing();
+      return;
+    }
+
+    // Draw only when inside and the mouse button is physically held
+    if (inside && this.mouseButtonPressed && this.isDrawing && this.canUserDraw) {
+      this.draw(event);
+    }
   }
 
   @HostListener('document:mousedown')
@@ -414,11 +433,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public draw(event: any): void {
-    // If the mouse button is not physically held, stop drawing (handles leave+re-enter case)
-    if (!this.mouseButtonPressed) {
-      if (this.isDrawing) this.cancelDrawing();
-      return;
-    }
     if (!this.isDrawing || !this.canUserDraw) return;
     if (event.type === 'touchmove') event.preventDefault();
 

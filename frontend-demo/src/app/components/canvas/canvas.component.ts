@@ -383,15 +383,56 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (this.currentRoomId === undefined) return;
 
     this.pixelService.getPixels(this.currentRoomId).subscribe(pixels => {
-      pixels.forEach(p => {
+      this.processPixelQueue(pixels);
+    });
+  }
+
+  /**
+   * Processes the initial drawing history in chunks to prevent UI freezes.
+   * Regular pixels are drawn in batches, while heavy 'FILL' actions are spaced out.
+   */
+  private processPixelQueue(pixels: Pixel[]): void {
+    if (pixels.length === 0) return;
+
+    const CHUNK_SIZE = 400; // Regular pixels per frame
+    let index = 0;
+
+    const process = () => {
+      const startTime = performance.now();
+      
+      // Process a chunk of pixels, but stop early if we hit a 'FILL' or spend too much time
+      while (index < pixels.length && performance.now() - startTime < 16) {
+        const p = pixels[index++];
+        
         if (p.type === 'FILL') {
           this.floodFill(p.x, p.y, p.color, true);
+          // Yield after a fill to let the browser breath
+          setTimeout(process, 0);
+          return;
+        } else if (p.type === 'CLEAR') {
+          this.ctx.fillStyle = this.themeBgColor;
+          this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        } else if (p.type === 'RESIZE' && p.width && p.height) {
+          this.canvasWidth = p.width;
+          this.canvasHeight = p.height;
+          this.resizeCanvas();
         } else {
           this.drawPixelLocally(p, false);
         }
-      });
-    });
+      }
+
+      if (index < pixels.length) {
+        // Schedule next batch for the next frame
+        requestAnimationFrame(process);
+      } else {
+        // All history loaded, clear dirty flag if it was a fresh load
+        this.isDirty = false;
+      }
+    };
+
+    process();
   }
+
 
 
   private setupWebSocket(roomId?: number): void {
@@ -883,6 +924,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.showClearConfirm = false;
   }
 
+  private lastFillColor: string = '';
+  private lastTargetColor32: number = 0;
+
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): void {
     if (this.isFilling) return;
     const canvas = this.canvasRef.nativeElement;
@@ -891,16 +935,21 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     this.isFilling = true;
     try {
-      // Use a robust color parser to get the 32-bit integer
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = 1;
-      tempCanvas.height = 1;
-      const tempCtx = tempCanvas.getContext('2d')!;
-      tempCtx.fillStyle = fillColor;
-      tempCtx.fillRect(0, 0, 1, 1);
-      const targetData = tempCtx.getImageData(0, 0, 1, 1).data;
-      const [r, g, b, a] = targetData;
-      const targetColor = (a << 24) | (b << 16) | (g << 8) | r;
+      let targetColor: number;
+      if (fillColor === this.lastFillColor) {
+        targetColor = this.lastTargetColor32;
+      } else {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 1;
+        tempCanvas.height = 1;
+        const tempCtx = tempCanvas.getContext('2d')!;
+        tempCtx.fillStyle = fillColor;
+        tempCtx.fillRect(0, 0, 1, 1);
+        const [r, g, b, a] = tempCtx.getImageData(0, 0, 1, 1).data;
+        targetColor = (a << 24) | (b << 16) | (g << 8) | r;
+        this.lastFillColor = fillColor;
+        this.lastTargetColor32 = targetColor;
+      }
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data32 = new Uint32Array(imageData.data.buffer);
@@ -911,43 +960,35 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
       if (startColor === targetColor) return;
 
-      // Hardened Scanline Algorithm
       const stack: number[] = [startX, startY];
       let safetyCounter = 0;
-      const maxIter = 1000000; // 1 million iterations max safety break
+      const maxIter = 1000000;
 
       while (stack.length > 0 && safetyCounter < maxIter) {
         safetyCounter++;
         const y = stack.pop()!;
         const x = stack.pop()!;
 
-        // Fill to the left
         let left = x;
         while (left > 0 && data32[y * width + (left - 1)] === startColor) {
           left--;
         }
 
-        // Fill to the right
         let right = x;
         while (right < width - 1 && data32[y * width + (right + 1)] === startColor) {
           right++;
         }
 
-        // Fill the current line span and check neighbors above and below
         for (let i = left; i <= right; i++) {
           data32[y * width + i] = targetColor;
 
-          // Check row above
           if (y > 0 && data32[(y - 1) * width + i] === startColor) {
-            // Only push the start of a new span in the row above
             if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
               stack.push(i, y - 1);
             }
           }
 
-          // Check row below
           if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
-            // Only push the start of a new span in the row below
             if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
               stack.push(i, y + 1);
             }
@@ -963,6 +1004,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.isFilling = false;
     }
   }
+
 
 
 

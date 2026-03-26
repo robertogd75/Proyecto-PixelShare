@@ -6,8 +6,8 @@
 
 
     <!-- Room Info Panel -->
-    <div class="room-info-badge">
-      <div class="info-group" *ngIf="currentRoomCode">
+    <div class="room-info-badge" *ngIf="currentRoomCode">
+      <div class="info-group">
         <div class="info-item">
           <span class="label">SALA</span>
           <div class="value-with-settings">
@@ -24,10 +24,10 @@
       </div>
 
       <div class="invite-actions">
-        <button class="btn-invite-pill code" *ngIf="currentRoomCode" (click)="copyInviteCode()">
+        <button class="btn-invite-pill code" (click)="copyInviteCode()">
           <span>📄 Código</span>
         </button>
-        <button class="btn-invite-pill link" *ngIf="currentRoomCode" (click)="copyInviteUrl()">
+        <button class="btn-invite-pill link" (click)="copyInviteUrl()">
           <span>🔗 Enlace</span>
         </button>
         <button class="btn-leave-pill" (click)='leaveRoom()'>

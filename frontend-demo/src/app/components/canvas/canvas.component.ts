@@ -167,12 +167,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any): void {
-    // Only show the native browser dialog if we are NOT currently handled by the Angular router guard.
-    // This allows our custom modal to win for "Back" button while F5 still gets native protection.
-    if (this.isDirty && !this.isRouterNavigating) {
+    // Only show the native browser dialog if we are NOT currently handled by the Angular router guard
+    // and NOT explicitly bypassing it (e.g. for a confirmed page reload).
+    if (this.isDirty && !this.isRouterNavigating && !this.drawingStateService.bypassBeforeUnload) {
       $event.returnValue = true;
     }
   }
+
 
 
 

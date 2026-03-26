@@ -18,7 +18,7 @@ import { DrawingStateService } from '../../services/drawing-state.service';
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <nav class="glass-navbar">
-      <div class="logo-container" routerLink="/">
+      <div class="logo-container" (click)="goToHome()" style="cursor: pointer;">
         <div class="logo-pixel"></div>
         <span class="logo-text">PixelShare</span>
       </div>
@@ -28,7 +28,8 @@ import { DrawingStateService } from '../../services/drawing-state.service';
           <span>{{ themeService.currentTheme === 'dark' ? '☀️' : '🌙' }}</span>
         </button>
         <button (click)="downloadService.requestDownload()" class="nav-btn secondary">📥 Descargar</button>
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
+        <a (click)="goToHome()" [class.active]="router.url === '/'" class="nav-link" style="cursor: pointer;">Pizarra Privada</a>
+
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
         <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
 
@@ -308,7 +309,7 @@ export class NavbarComponent {
   isCreating = false;
 
   constructor(
-    private router: Router,
+    public router: Router,
     private pixelService: PixelService,
     private toastService: ToastService,
     private cdr: ChangeDetectorRef,
@@ -328,6 +329,24 @@ export class NavbarComponent {
   }
 
   private pendingModalTask: (() => void) | null = null;
+
+  goToHome() {
+    if (this.drawingService.isDirty) {
+      this.pendingModalTask = () => {
+        if (this.router.url === '/') {
+          // If already at home (Private Board), a confirmed "Exit" means clear the board.
+          // We achieve this via a reload, bypassing the beforeunload warning we just answered.
+          this.drawingService.bypassBeforeUnload = true;
+          window.location.reload();
+        } else {
+          this.router.navigate(['/']);
+        }
+      };
+      this.drawingService.requestLeaveConfirmation();
+      return;
+    }
+    this.router.navigate(['/']);
+  }
 
 
 

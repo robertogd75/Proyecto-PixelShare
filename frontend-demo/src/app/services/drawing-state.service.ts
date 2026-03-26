@@ -24,7 +24,11 @@ export class DrawingStateService {
   private confirmResponseSource = new Subject<boolean>();
   confirmResponse$ = this.confirmResponseSource.asObservable();
 
+  /** Boolean to temporarily disable the browser's native beforeunload dialog */
+  public bypassBeforeUnload = false;
+
   /** Update the dirty state */
+
   setDirty(value: boolean): void {
     this.isDirtySubject.next(value);
   }

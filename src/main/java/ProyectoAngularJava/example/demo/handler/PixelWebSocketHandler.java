@@ -92,14 +92,20 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                     // 1. Add to room sessions map for optimized broadcasting
                     roomSessions.computeIfAbsent(roomId, k -> Collections.synchronizedSet(new HashSet<>())).add(session);
 
-                    // 2. Initial State Sync: Send existing artwork to the joiner
+                    // 2. Initial State Sync: Send existing artwork to the joiner in chunks to avoid large message limits
                     List<Pixel> history = pixelRepository.findByRoomId(roomId);
                     if (!history.isEmpty()) {
-                        Pixel initMsg = new Pixel();
-                        initMsg.setType("INIT_PIXELS");
-                        initMsg.setRoomId(roomId);
-                        initMsg.setPixelHistory(history);
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(initMsg)));
+                        int chunkSize = 1000;
+                        for (int i = 0; i < history.size(); i += chunkSize) {
+                            int end = Math.min(i + chunkSize, history.size());
+                            List<Pixel> chunk = history.subList(i, end);
+                            
+                            Pixel initMsg = new Pixel();
+                            initMsg.setType("INIT_PIXELS");
+                            initMsg.setRoomId(roomId);
+                            initMsg.setPixelHistory(chunk);
+                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(initMsg)));
+                        }
                     }
                 }
             }

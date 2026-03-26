@@ -448,10 +448,15 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private processPixelQueue(pixels: Pixel[]): void {
     if (pixels.length === 0) return;
 
+    // Robustness: Handle early initialization race conditions
+    if (!this.ctx || !this.canvasRef) {
+      setTimeout(() => this.processPixelQueue(pixels), 100);
+      return;
+    }
+
     let index = 0;
     const canvas = this.canvasRef.nativeElement;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
+    const ctx = this.ctx;
 
     const process = async () => {
       const startTime = performance.now();

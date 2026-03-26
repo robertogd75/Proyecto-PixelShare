@@ -345,17 +345,19 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-toolbar);
-  backdrop-filter: blur(20px);
-  padding: 10px 25px;
-  border-radius: 40px;
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  padding: 12px 28px;
+  border-radius: 35px;
   display: flex;
-  gap: 18px;
+  gap: 22px;
   align-items: center;
   box-shadow: 0 10px 40px var(--shadow-color);
   border: 1px solid var(--border-color);
   z-index: 1000;
   white-space: nowrap;
   transition: opacity 0.25s ease, transform 0.25s ease;
+
   opacity: 1;
   color: var(--text-primary);
 }
@@ -420,25 +422,31 @@ canvas {
 
 .tool-group {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 5px;
 }
 
 .tool-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
+  opacity: 0.8;
+  line-height: 1;
 }
+
 
 
 .tool-value {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-primary);
-  min-width: 45px;
+  min-width: 35px;
+  text-align: center;
 }
+
 
 .toolbar select, .toolbar input {
   background: var(--bg-card);
@@ -459,10 +467,12 @@ input[type="color"] {
 }
 
 input[type="range"] {
-  width: 120px;
+  width: 110px;
   cursor: pointer;
   accent-color: var(--text-primary);
+  margin: 0;
 }
+
 
 
 .btn-clear {

@@ -112,11 +112,25 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   set isDirty(val: boolean) {
     this._isDirty = val;
     this.drawingStateService.setDirty(val);
+    
+    // Create a history trap when the board becomes dirty
+    // This allows us to intercept the browser "Back" button even when leaving the site
+    if (val && !this.hasHistoryTrap) {
+      this.hasHistoryTrap = true;
+      history.pushState({ type: 'drawing-protection' }, '');
+    } else if (!val && this.hasHistoryTrap) {
+      // If we are cleaned, and we were trapped, we should ideally go back...
+      // but that's messy. We just clear the flag and trust the next navigation.
+      this.hasHistoryTrap = false;
+    }
   }
+
   private navigateAnyway$ = new Subject<boolean>();
   private triggeredByGuard = false;
   private isRouterNavigating = false;
   private exitAfterDownload = false;
+  private hasHistoryTrap = false;
+
 
 
 
@@ -165,7 +179,21 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
 
+  @HostListener('window:popstate', ['$event'])
+  onPopState(event: PopStateEvent): void {
+    if (this.isDirty && this.hasHistoryTrap) {
+      // The browser already went "Back" one step. 
+      // We immediately push the state back to stay on the page and show our modal.
+      history.pushState({ type: 'drawing-protection' }, '');
+      this.showExitConfirm = true;
+      this.cdr.detectChanges();
+    } else {
+      this.hasHistoryTrap = false;
+    }
+  }
+
   @HostListener('window:beforeunload', ['$event'])
+
   unloadNotification($event: any): void {
     // Only show the native browser dialog if we are NOT currently handled by the Angular router guard
     // and NOT explicitly bypassing it (e.g. for a confirmed page reload).

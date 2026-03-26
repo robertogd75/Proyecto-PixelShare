@@ -934,76 +934,100 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (!ctx) return;
 
     this.isFilling = true;
-    try {
-      let targetColor: number;
-      if (fillColor === this.lastFillColor) {
-        targetColor = this.lastTargetColor32;
-      } else {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = 1;
-        tempCanvas.height = 1;
-        const tempCtx = tempCanvas.getContext('2d')!;
-        tempCtx.fillStyle = fillColor;
-        tempCtx.fillRect(0, 0, 1, 1);
-        const [r, g, b, a] = tempCtx.getImageData(0, 0, 1, 1).data;
-        targetColor = (a << 24) | (b << 16) | (g << 8) | r;
-        this.lastFillColor = fillColor;
-        this.lastTargetColor32 = targetColor;
-      }
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data32 = new Uint32Array(imageData.data.buffer);
-      const width = canvas.width;
-      const height = canvas.height;
-      const startIdx = startY * width + startX;
-      const startColor = data32[startIdx];
-
-      if (startColor === targetColor) return;
-
-      const stack: number[] = [startX, startY];
-      let safetyCounter = 0;
-      const maxIter = 1000000;
-
-      while (stack.length > 0 && safetyCounter < maxIter) {
-        safetyCounter++;
-        const y = stack.pop()!;
-        const x = stack.pop()!;
-
-        let left = x;
-        while (left > 0 && data32[y * width + (left - 1)] === startColor) {
-          left--;
-        }
-
-        let right = x;
-        while (right < width - 1 && data32[y * width + (right + 1)] === startColor) {
-          right++;
-        }
-
-        for (let i = left; i <= right; i++) {
-          data32[y * width + i] = targetColor;
-
-          if (y > 0 && data32[(y - 1) * width + i] === startColor) {
-            if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
-              stack.push(i, y - 1);
-            }
-          }
-
-          if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
-            if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
-              stack.push(i, y + 1);
-            }
-          }
-        }
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-      this.isDirty = true;
-    } catch (e) {
-      console.error('Flood fill failed', e);
-    } finally {
-      this.isFilling = false;
+    
+    // 1. Resolve target color
+    let targetColor: number;
+    if (fillColor === this.lastFillColor) {
+      targetColor = this.lastTargetColor32;
+    } else {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 1; tempCanvas.height = 1;
+      const tCtx = tempCanvas.getContext('2d')!;
+      tCtx.fillStyle = fillColor;
+      tCtx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = tCtx.getImageData(0, 0, 1, 1).data;
+      targetColor = (a << 24) | (b << 16) | (g << 8) | r;
+      this.lastFillColor = fillColor;
+      this.lastTargetColor32 = targetColor;
     }
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const width = canvas.width;
+    const height = canvas.height;
+    const data32 = new Uint32Array(imageData.data.buffer);
+    const startIdx = startY * width + startX;
+    const startColor = data32[startIdx];
+
+    if (startColor === targetColor) {
+      this.isFilling = false;
+      return;
+    }
+
+    // 2. Create Inline Web Worker for Background Processing
+    const workerScript = `
+      self.onmessage = function(e) {
+        const { buffer, width, height, startX, startY, startColor, targetColor } = e.data;
+        const data32 = new Uint32Array(buffer);
+        const stack = [startX, startY];
+        let safety = 0;
+        const maxIter = 5000000;
+
+        while (stack.length > 0 && safety < maxIter) {
+          safety++;
+          const y = stack.pop();
+          const x = stack.pop();
+
+          let left = x;
+          while (left > 0 && data32[y * width + (left - 1)] === startColor) { left--; }
+          let right = x;
+          while (right < width - 1 && data32[y * width + (right + 1)] === startColor) { right++; }
+
+          for (let i = left; i <= right; i++) {
+            data32[y * width + i] = targetColor;
+            if (y > 0 && data32[(y - 1) * width + i] === startColor) {
+              if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
+                stack.push(i, y - 1);
+              }
+            }
+            if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
+              if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
+                stack.push(i, y + 1);
+              }
+            }
+          }
+        }
+        self.postMessage({ buffer }, [buffer]);
+      };
+    `;
+
+    const blob = new Blob([workerScript], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    const worker = new Worker(workerUrl);
+
+    worker.onmessage = (e) => {
+      const buffer = e.data.buffer;
+      const resultImageData = new ImageData(new Uint8ClampedArray(buffer), width, height);
+      ctx.putImageData(resultImageData, 0, 0);
+      this.isDirty = true;
+      this.isFilling = false;
+      worker.terminate();
+      URL.revokeObjectURL(workerUrl);
+    };
+
+    worker.onerror = (err) => {
+      console.error('Flood fill worker error', err);
+      this.isFilling = false;
+      worker.terminate();
+      URL.revokeObjectURL(workerUrl);
+    };
+
+    // 3. Transfer Buffer to Worker (Zero-Copy)
+    const buffer = imageData.data.buffer;
+    worker.postMessage({
+      buffer, width, height, startX, startY, startColor, targetColor
+    }, [buffer]);
   }
+
 
 
 

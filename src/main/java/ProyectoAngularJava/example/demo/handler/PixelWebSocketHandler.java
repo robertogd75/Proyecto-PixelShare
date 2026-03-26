@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Map;
+import java.util.List;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -147,6 +148,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
             }
         }
     }
+}
 
     @Scheduled(fixedDelay = 60000)
     public void cleanupEmptyRooms() {

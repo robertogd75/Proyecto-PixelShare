@@ -134,6 +134,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private exitAfterDownload = false;
   private hasHistoryTrap = false;
   private currentStrokeBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  private globalDirtyBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
 
   // Throttling for collaborative performance
   private lastSendTime = 0;
@@ -757,6 +758,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.lastLocalFillX = pos.x;
       this.lastLocalFillY = pos.y;
       this.lastLocalFillColor = this.currentColor;
+      
+      // Lazy Sync: Only sync the buffer RIGHT BEFORE we need to fill
+      this.syncPendingBuffer();
+      
       this.floodFill(pos.x, pos.y, this.currentColor);
       const fillPixel: Pixel = {
         x: pos.x, y: pos.y, color: this.currentColor,
@@ -835,26 +840,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (this.selectedTool !== 'brush' && this.selectedTool !== 'eraser') {
       this.finalizeShape();
     }
-
-    // Final sync before closing
-    const b = this.currentStrokeBounds;
-    if (b.minX !== Infinity) {
-      this.syncBufferRegion(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
-    }
-
-    // Ensure last point is sent to WebSocket for perfect lines
-    if (this.lastPos && (this.selectedTool === 'brush' || this.selectedTool === 'eraser')) {
-      this.pixelService.sendPixel({
-        x: this.lastPos.x,
-        y: this.lastPos.y,
-        fromX: this.lastSentPos?.x,
-        fromY: this.lastSentPos?.y,
-        color: this.selectedTool === 'eraser' ? this.themeBgColor : this.currentColor,
-        size: this.brushSize,
-        roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
-      });
-    }
-
+    
     this.isDrawing = false;
     this.lastPos = null;
     this.startPos = null;
@@ -868,14 +854,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     const pos = this.getEventPos(event);
 
-    if (this.isDrawing) {
-      const pad = (this.brushSize || 5) + 10;
-      this.currentStrokeBounds.minX = Math.min(this.currentStrokeBounds.minX, pos.x - pad);
-      this.currentStrokeBounds.minY = Math.min(this.currentStrokeBounds.minY, pos.y - pad);
-      this.currentStrokeBounds.maxX = Math.max(this.currentStrokeBounds.maxX, pos.x + pad);
-      this.currentStrokeBounds.maxY = Math.max(this.currentStrokeBounds.maxY, pos.y + pad);
-    }
-
     if (this.selectedTool === 'brush' || this.selectedTool === 'eraser') {
       const pixel: Pixel = {
         x: pos.x,
@@ -886,10 +864,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         size: this.brushSize,
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       };
+      
       this.drawPixelLocally(pixel, true);
       this.lastPos = pos;
     } else {
-      this.lastPos = pos; // Cache latest pos for finalizeShape
+      this.lastPos = pos;
       this.drawPreview(pos);
     }
   }
@@ -985,50 +964,44 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.ctx.lineJoin = 'round';
 
     this.ctx.beginPath();
-    if (isLocal) {
-      this.isDirty = true;
-      if (this.lastPos) {
-        this.ctx.moveTo(this.lastPos.x, this.lastPos.y);
-        this.ctx.lineTo(pixel.x, pixel.y);
-      } else {
-        this.ctx.moveTo(pixel.x, pixel.y);
-        this.ctx.lineTo(pixel.x, pixel.y);
-      }
-      this.lastPos = { x: pixel.x, y: pixel.y };
-
-      // Collaborative Overdrive: Throttled Pixel Sending (30ms pulse)
-      // This eliminates "shared room lag" by reducing traffic by ~60%
-      const now = performance.now();
-      if (now - this.lastSendTime > 30) {
-        this.pixelService.sendPixel({
-          ...pixel,
-          fromX: this.lastSentPos?.x,
-          fromY: this.lastSentPos?.y
-        });
-        this.lastSendTime = now;
-        this.lastSentPos = { x: pixel.x, y: pixel.y };
-      }
+    if (pixel.fromX != null && pixel.fromY != null) {
+      this.ctx.moveTo(pixel.fromX, pixel.fromY);
     } else {
-      if (pixel.fromX != null && pixel.fromY != null) {
-        this.ctx.moveTo(pixel.fromX, pixel.fromY);
-        this.ctx.lineTo(pixel.x, pixel.y);
-      } else {
-        this.ctx.moveTo(pixel.x, pixel.y);
-        this.ctx.lineTo(pixel.x, pixel.y);
-      }
+      this.ctx.moveTo(pixel.x, pixel.y);
     }
+    this.ctx.lineTo(pixel.x, pixel.y);
     this.ctx.stroke();
 
-    // Deferred Sync for remote drawing
-    if (!isLocal) {
-      const pad = (pixel.size || 5) + 5;
+    if (isLocal) {
+      this.isDirty = true;
+      
+      // Send for collaboration
+      this.pixelService.sendPixel(pixel);
+
+      // Expand dirty bounds for Lazy Sync
+      const pad = (pixel.size || 5) + 10;
       const x = Math.min(pixel.x, pixel.fromX ?? pixel.x) - pad;
       const y = Math.min(pixel.y, pixel.fromY ?? pixel.y) - pad;
       const w = Math.abs(pixel.x - (pixel.fromX ?? pixel.x)) + pad * 2;
       const h = Math.abs(pixel.y - (pixel.fromY ?? pixel.y)) + pad * 2;
-      this.syncBufferRegion(x, y, w, h);
+      this.updateDirtyBounds(x, y, w, h);
     }
-    // Local sync is now handled in stopDrawing() for performance
+  }
+
+  private updateDirtyBounds(x: number, y: number, w: number, h: number): void {
+    this.globalDirtyBounds.minX = Math.min(this.globalDirtyBounds.minX, x);
+    this.globalDirtyBounds.minY = Math.min(this.globalDirtyBounds.minY, y);
+    this.globalDirtyBounds.maxX = Math.max(this.globalDirtyBounds.maxX, x + w);
+    this.globalDirtyBounds.maxY = Math.max(this.globalDirtyBounds.maxY, y + h);
+  }
+
+  private syncPendingBuffer(): void {
+    const b = this.globalDirtyBounds;
+    if (b.minX !== Infinity) {
+      this.syncBufferRegion(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
+      // Reset dirty bounds
+      this.globalDirtyBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    }
   }
 
   private syncBufferRegion(x: number, y: number, w: number, h: number): void {

@@ -42,6 +42,12 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private startPos: { x: number, y: number } | null = null;
   private lastPos: { x: number, y: number } | null = null;
 
+  /** Returns a CSS cursor that is always visible over the white canvas */
+  get canvasCursor(): string {
+    if (this.selectedTool === 'eraser') return 'cell';
+    return 'crosshair';
+  }
+
   constructor(
     private pixelService: PixelService,
     private route: ActivatedRoute,
@@ -348,6 +354,21 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         size: this.brushSize,
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       }, true);
+    }
+  }
+
+  /** Stop drawing and cancel any in-progress shape without finalizing it (used on mouseleave) */
+  public cancelDrawing(): void {
+    this.isDrawing = false;
+    this.lastPos = null;
+    this.startPos = null;
+    this.tempCtx?.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+  }
+
+  @HostListener('window:mouseup')
+  onWindowMouseUp(): void {
+    if (this.isDrawing) {
+      this.stopDrawing();
     }
   }
 

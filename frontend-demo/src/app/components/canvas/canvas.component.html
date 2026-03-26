@@ -71,11 +71,12 @@
           <canvas #canvasElement
                   [style.width.px]="canvasWidth * zoomLevel"
                   [style.height.px]="canvasHeight * zoomLevel"
+                  [style.cursor]="canvasCursor"
                   style="pointer-events: auto; display: block;"
                   (mousedown)="startDrawing($event)"
                   (mousemove)="draw($event)"
                   (mouseup)="stopDrawing()"
-                  (mouseleave)="stopDrawing()"
+                  (mouseleave)="cancelDrawing()"
                   (touchstart)="startDrawing($event)"
                   (touchmove)="draw($event)"
                   (touchend)="stopDrawing()">

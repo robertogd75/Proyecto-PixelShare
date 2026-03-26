@@ -42,6 +42,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private startPos: { x: number, y: number } | null = null;
   private lastPos: { x: number, y: number } | null = null;
 
+  public darkMode = false;
+
   // Custom cursor state
   public cursorX = 0;
   public cursorY = 0;
@@ -324,6 +326,18 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (this.showSettingsMenu) this.showToolMenu = false;
   }
 
+  public toggleDarkMode(): void {
+    this.darkMode = !this.darkMode;
+    localStorage.setItem('pixelshare-theme', this.darkMode ? 'dark' : 'light');
+    
+    // If switching to dark mode and color is black, switch to white for better visibility
+    if (this.darkMode && this.currentColor === '#000000') {
+      this.currentColor = '#ffffff';
+    } else if (!this.darkMode && this.currentColor === '#ffffff') {
+      this.currentColor = '#000000';
+    }
+  }
+
   public toggleToolMenu(): void {
     this.showToolMenu = !this.showToolMenu;
     if (this.showToolMenu) this.showSettingsMenu = false;
@@ -558,10 +572,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   get gridBackgroundImage(): string {
     // Compensate line thickness so lines are always visible regardless of zoom.
-    // At zoom 0.5x a 2px line renders as 1 screen pixel; at zoom 0.1x a 10px line renders as 1 screen pixel.
     const lw = Math.max(1, Math.ceil(1 / this.zoomLevel));
-    return `linear-gradient(rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px),
-            linear-gradient(90deg, rgba(0,0,0,0.5) ${lw}px, transparent ${lw}px)`;
+    const gridColor = this.darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
+    return `linear-gradient(${gridColor} ${lw}px, transparent ${lw}px),
+            linear-gradient(90deg, ${gridColor} ${lw}px, transparent ${lw}px)`;
   }
 
   public toggleGrid(): void {

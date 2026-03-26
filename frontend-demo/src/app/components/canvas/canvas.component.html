@@ -1,4 +1,4 @@
-<div class="canvas-container">
+<div class="canvas-container" [class.dark-theme]="darkMode">
   <div class="canvas-header">
     <div class="title-section">
       <h2>{{ canvasTitle }}</h2>
@@ -28,6 +28,9 @@
         </button>
         <button class="btn-invite-pill link" (click)="copyInviteUrl()">
           <span>🔗 Enlace</span>
+        </button>
+        <button class="btn-theme-pill" (click)="toggleDarkMode()" [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'">
+          <span>{{ darkMode ? '☀️' : '🌙' }}</span>
         </button>
         <button class="btn-leave-pill" (click)="leaveRoom()">
           <span>🚪 Salir</span>

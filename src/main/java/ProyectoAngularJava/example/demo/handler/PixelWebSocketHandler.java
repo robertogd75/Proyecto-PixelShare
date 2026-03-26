@@ -79,8 +79,8 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                     Pixel settingsMsg = new Pixel();
                     settingsMsg.setType("SETTINGS_UPDATE");
                     settingsMsg.setRoomId(roomId);
-                    settingsMsg.setAllowAllDraw(roomAllowAllDraw.getOrDefault(roomId, false));
-                    settingsMsg.setAllowAllClear(roomAllowAllClear.getOrDefault(roomId, false));
+                    settingsMsg.setAllowAllDraw(roomAllowAllDraw.getOrDefault(roomId, true));
+                    settingsMsg.setAllowAllClear(roomAllowAllClear.getOrDefault(roomId, true));
                     session.sendMessage(new TextMessage(objectMapper.writeValueAsString(settingsMsg)));
                 }
             }
@@ -185,6 +185,14 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
             // Only save to DB if it's not a transient control message
             if (roomId != null) {
                 pixelRepository.save(pixel);
+            }
+        } else if ("TERMINATE_ROOM".equals(pixel.getType())) {
+            if (isHost && roomId != null) {
+                roomRepository.deleteById(roomId);
+                pixel.setType("HOST_CLOSED"); // Morph message to kick everyone else
+                System.out.println("Host " + sessionId + " explicitly terminated room " + roomId);
+            } else {
+                return; // Guest cannot terminate room
             }
         }
 

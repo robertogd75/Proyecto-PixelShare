@@ -178,6 +178,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
       if (path === 'room') {
         const code = url[1]?.path;
+        if (!code) {
+          this.router.navigate(['/']);
+          return;
+        }
+
         this.pixelService.getRoom(code).subscribe({
           next: room => {
             if (room && room.id) {
@@ -203,6 +208,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
             this.router.navigate(['/']);
           }
         });
+
       } else {
         this.currentRoomId = undefined; // Private
         this.currentRoomName = 'Privada';

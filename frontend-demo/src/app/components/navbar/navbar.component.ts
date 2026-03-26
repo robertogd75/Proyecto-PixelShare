@@ -32,14 +32,11 @@ import { DownloadService } from '../../services/download.service';
 
       </div>
 
-    </nav>
-
-    <!-- Modal System -->
+        <!-- Modal System -->
     <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-      <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header-simple">
           <h2>{{ modalTitle }}</h2>
-          <button class="btn-close" (click)="closeModal()">&times;</button>
         </div>
 
         <div class="modal-body">
@@ -68,7 +65,7 @@ import { DownloadService } from '../../services/download.service';
                 <span>📄 Copiar Código</span>
               </button>
               <button class="btn-copy-link" (click)="copyInvitation()">
-                <span>🔗 Copiar Enlace</span>
+                <span>🔗 Enlace</span>
               </button>
             </div>
           </div>
@@ -162,57 +159,15 @@ import { DownloadService } from '../../services/download.service';
     .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--shadow-color); }
 
 
-    /* Modal Styles */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(8px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-      padding: 20px;
-    }
-
-    .modal-content {
-      background: var(--bg-card);
-      width: 100%;
-      max-width: 450px;
-      border-radius: 24px;
-      box-shadow: 0 25px 50px var(--shadow-color);
-      overflow: hidden;
-      animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      color: var(--text-primary);
-    }
-
-
-    @keyframes modalPop {
-      from { transform: scale(0.95) translateY(10px); opacity: 0; }
-      to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-
-    .modal-header {
-      padding: 25px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-
-    .modal-header h2 { font-size: 1.25rem; font-weight: 800; margin: 0; }
-    .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
-
-    .modal-body { padding: 30px; }
+    /* Modal Specific overrides for Navbar (mostly global now) */
+    .modal-card h2 { font-size: 1.25rem; font-weight: 800; margin: 0; }
+    
+    .modal-body { padding: 0; }
     .description { color: var(--text-secondary); margin-bottom: 25px; line-height: 1.5; }
 
     .form-group { margin-bottom: 25px; }
     .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid var(--border-color); background: var(--bg-main); color: var(--text-primary); font-size: 1rem; font-weight: 600; transition: all 0.2s; }
+    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid var(--border-color); background: var(--bg-main); color: var(--text-primary); font-size: 1rem; font-weight: 600; transition: all 0.2s; box-sizing: border-box; }
     .form-group input:focus { outline: none; border-color: var(--text-primary); }
 
 
@@ -318,15 +273,13 @@ import { DownloadService } from '../../services/download.service';
       /* Modal full-width on mobile */
       .modal-overlay { padding: 12px; align-items: flex-end; }
 
-      .modal-content {
+      .modal-card {
         border-radius: 20px 20px 16px 16px;
         max-width: 100%;
+        padding: 20px;
       }
 
-      .modal-header { padding: 18px 20px; }
-      .modal-header h2 { font-size: 1.1rem; }
-
-      .modal-body { padding: 20px; }
+      .modal-header-simple { margin-bottom: 10px; }
 
       .code-value { font-size: 1.5rem; letter-spacing: 1px; }
 
@@ -342,6 +295,7 @@ import { DownloadService } from '../../services/download.service';
     }
   `]
 })
+
 export class NavbarComponent {
   showModal = false;
   modalMode: 'join' | 'create' | 'success' = 'create';

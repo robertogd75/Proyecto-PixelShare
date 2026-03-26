@@ -6,6 +6,8 @@ import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 import { ToastService } from '../../services/toast.service';
 import { Subscription } from 'rxjs';
+import { ThemeService } from '../../services/theme.service';
+
 
 @Component({
   selector: 'app-canvas',
@@ -42,7 +44,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private startPos: { x: number, y: number } | null = null;
   private lastPos: { x: number, y: number } | null = null;
 
-  public darkMode = false;
+  public get darkMode(): boolean {
+    return this.themeService.currentTheme === 'dark';
+  }
+
 
   // Custom cursor state
   public cursorX = 0;
@@ -73,8 +78,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     private pixelService: PixelService,
     private route: ActivatedRoute,
     private router: Router,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private themeService: ThemeService
   ) {}
+
 
   public allowAllDraw = false;
   public allowAllClear = false;
@@ -92,7 +99,25 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.currentColor = '#000000';
     this.handleRouting();
+
+    // Sync drawing color and refill canvas when theme changes
+    this.themeService.theme$.subscribe(theme => {
+      const isDark = theme === 'dark';
+      if (isDark && this.currentColor === '#000000') {
+        this.currentColor = '#ffffff';
+      } else if (!isDark && this.currentColor === '#ffffff') {
+        this.currentColor = '#000000';
+      }
+      
+      // We must wait for the next tick for CSS variables to update and for the canvas to be ready
+      setTimeout(() => {
+        if (this.ctx) {
+          this.refillCanvasBackground();
+        }
+      }, 0);
+    });
   }
+
 
   ngAfterViewInit(): void {
     this.initCanvas();
@@ -146,6 +171,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
               this.canvasWidth = 5657;
               this.canvasHeight = 4000;
               this.resizeCanvas();
+              this.refillCanvasBackground();
+
               this.loadInitialState();
               this.setupWebSocket(this.currentRoomId);
             } else {
@@ -197,10 +224,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
       // Fill background again since resizing clears it
-      this.ctx.fillStyle = 'white';
+      this.ctx.fillStyle = this.themeBgColor;
       this.ctx.fillRect(0, 0, this.canvasRef.nativeElement.width, this.canvasRef.nativeElement.height);
     }
   }
+
 
   public changeCanvasSize(size: string): void {
     if (this.currentRoomId !== undefined && !this.isRoomHost) {
@@ -260,8 +288,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         this.fitZoom();
       } else if (pixel.type === 'CLEAR') {
         const canvas = this.canvasRef.nativeElement;
-        this.ctx.fillStyle = 'white';
+        this.ctx.fillStyle = this.themeBgColor;
         this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       } else if (pixel.type === 'RECT' || pixel.type === 'CIRCLE' || pixel.type === 'LINE') {
         this.drawShapeLocally(pixel);
       } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
@@ -332,23 +361,18 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (this.showSettingsMenu) this.showToolMenu = false;
   }
 
-  public toggleDarkMode(): void {
-    this.darkMode = !this.darkMode;
-    localStorage.setItem('pixelshare-theme', this.darkMode ? 'dark' : 'light');
-    
-    // Update the actual canvas background if it's currently base color
-    // This is a simple refill to meet the user's "black board" requirement
+  /** Refills the canvas with the current theme background color without clearing drawings (caution: this fills the base layer) */
+  private refillCanvasBackground(): void {
+    if (!this.ctx) return;
     const canvas = this.canvasRef.nativeElement;
+    const prevStrokeStyle = this.ctx.strokeStyle;
     this.ctx.fillStyle = this.themeBgColor;
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // If switching to dark mode and color is black, switch to white for better visibility
-    if (this.darkMode && this.currentColor === '#000000') {
-      this.currentColor = '#ffffff';
-    } else if (!this.darkMode && this.currentColor === '#ffffff') {
-      this.currentColor = '#000000';
-    }
+    this.ctx.strokeStyle = prevStrokeStyle;
   }
+
+  // Local theme toggle removed - moved to NavbarComponent
+
 
   public toggleToolMenu(): void {
     this.showToolMenu = !this.showToolMenu;

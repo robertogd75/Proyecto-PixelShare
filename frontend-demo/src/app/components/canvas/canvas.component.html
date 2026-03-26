@@ -1,11 +1,9 @@
-<div class="canvas-container" [class.dark-theme]="darkMode">
+<div class="canvas-container">
   <div class="canvas-header">
     <div class="title-section">
-      <button class="btn-theme-pill" (click)="toggleDarkMode()" [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'">
-        <span>{{ darkMode ? '☀️' : '🌙' }}</span>
-      </button>
       <h2>{{ canvasTitle }}</h2>
     </div>
+
 
     <!-- Room Info Panel -->
     <div class="room-info-badge" *ngIf="currentRoomCode">

@@ -39,17 +39,18 @@ import { Subscription } from 'rxjs';
       min-width: 300px;
       padding: 16px 20px;
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--bg-card);
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 10px 30px var(--shadow-color);
+      border: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       gap: 15px;
       animation: toastSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       pointer-events: auto;
     }
+
 
     @keyframes toastSlide {
       from { transform: translateX(50px); opacity: 0; }
@@ -67,15 +68,20 @@ import { Subscription } from 'rxjs';
       font-size: 0.9rem;
     }
 
-    .success .toast-icon { background: #e6fffa; color: #38b2ac; }
-    .error .toast-icon { background: #fff5f5; color: #f56565; }
-    .info .toast-icon { background: #ebf8ff; color: #4299e1; }
+    .success .toast-icon { background: #e6fffa; color: #1a7f71; }
+    .error .toast-icon { background: #fff5f5; color: #c53030; }
+    .info .toast-icon { background: #ebf8ff; color: #2b6cb0; }
+
+    :host-context(body.theme-dark) .success .toast-icon { background: #1a3a3a; color: #4fd1c5; }
+    :host-context(body.theme-dark) .error .toast-icon { background: #3a1a1a; color: #fc8181; }
+    :host-context(body.theme-dark) .info .toast-icon { background: #1a2a3a; color: #63b3ed; }
 
     .toast-message {
       font-size: 0.95rem;
       font-weight: 600;
-      color: #333;
+      color: var(--text-primary);
     }
+
   `]
 })
 export class ToastComponent implements OnInit, OnDestroy {

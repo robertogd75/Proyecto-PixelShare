@@ -1,10 +1,40 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --bg-main: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-header: #ffffff;
+  --bg-toolbar: rgba(255, 255, 255, 0.95);
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --text-muted: #888888;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --canvas-bg: #ffffff;
+  --viewport-bg: #dee2e6;
+  --active-blue: #007bff;
+  --danger-red: #ff4757;
+}
+
+body.theme-dark {
+  --bg-main: #121212;
+  --bg-header: #1a1a1a;
+  --bg-card: #1e1e1e;
+  --bg-toolbar: rgba(30, 30, 30, 0.98);
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --text-muted: #888888;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --shadow-color: rgba(0, 0, 0, 0.6);
+  --canvas-bg: #000000;
+  --viewport-bg: #2a2a2a;
+}
 
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
   /* Prevent text selection during drawing on touch */
   -webkit-user-select: none;
   user-select: none;
@@ -16,3 +46,4 @@ app-root {
   display: block;
   height: 100%;
 }
+

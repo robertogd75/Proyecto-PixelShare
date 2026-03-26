@@ -5,6 +5,8 @@ import { Router, RouterModule } from '@angular/router';
 import { PixelService } from '../../services/pixel.service';
 import { ToastService } from '../../services/toast.service';
 import { finalize, timeout } from 'rxjs';
+import { ThemeService } from '../../services/theme.service';
+
 
 @Component({
   selector: 'app-navbar',
@@ -18,10 +20,14 @@ import { finalize, timeout } from 'rxjs';
       </div>
 
       <div class="nav-links">
+        <button class="btn-theme-toggle" (click)="themeService.toggleTheme()" [title]="themeService.currentTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'">
+          <span>{{ themeService.currentTheme === 'dark' ? '☀️' : '🌙' }}</span>
+        </button>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Pizarra Privada</a>
         <button (click)="openJoinModal()" class="nav-btn secondary">Unirse a Sala</button>
         <button (click)="openCreateModal()" class="nav-btn primary">Crear Sala</button>
       </div>
+
     </nav>
 
     <!-- Modal System -->
@@ -81,14 +87,16 @@ import { finalize, timeout } from 'rxjs';
       justify-content: space-between;
       align-items: center;
       padding: 0 40px;
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--bg-header);
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid var(--border-color);
       position: sticky;
       top: 0;
       z-index: 1000;
+      transition: all 0.3s ease;
     }
+
 
     .logo-container {
       display: flex;
@@ -100,17 +108,18 @@ import { finalize, timeout } from 'rxjs';
     .logo-pixel {
       width: 24px;
       height: 24px;
-      background: #000;
+      background: var(--text-primary);
       border-radius: 6px;
-      box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+      box-shadow: 4px 4px 0 var(--border-color);
     }
 
     .logo-text {
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: -1px;
-      color: #000;
+      color: var(--text-primary);
     }
+
 
     .nav-links {
       display: flex;
@@ -120,7 +129,7 @@ import { finalize, timeout } from 'rxjs';
 
     .nav-link {
       text-decoration: none;
-      color: #666;
+      color: var(--text-secondary);
       font-weight: 600;
       font-size: 0.95rem;
       padding: 8px 15px;
@@ -129,9 +138,10 @@ import { finalize, timeout } from 'rxjs';
     }
 
     .nav-link:hover, .nav-link.active {
-      color: #000;
-      background: rgba(0, 0, 0, 0.03);
+      color: var(--text-primary);
+      background: var(--border-color);
     }
+
 
     .nav-btn {
       padding: 10px 20px;
@@ -143,9 +153,10 @@ import { finalize, timeout } from 'rxjs';
       transition: all 0.2s;
     }
 
-    .nav-btn.primary { background: #000; color: #fff; }
-    .nav-btn.secondary { background: #f0f0f0; color: #333; }
-    .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .nav-btn.primary { background: var(--text-primary); color: var(--bg-card); }
+    .nav-btn.secondary { background: var(--bg-main); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--shadow-color); }
+
 
     /* Modal Styles */
     .modal-overlay {
@@ -164,14 +175,16 @@ import { finalize, timeout } from 'rxjs';
     }
 
     .modal-content {
-      background: white;
+      background: var(--bg-card);
       width: 100%;
       max-width: 450px;
       border-radius: 24px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 25px 50px var(--shadow-color);
       overflow: hidden;
       animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      color: var(--text-primary);
     }
+
 
     @keyframes modalPop {
       from { transform: scale(0.95) translateY(10px); opacity: 0; }
@@ -183,41 +196,45 @@ import { finalize, timeout } from 'rxjs';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--border-color);
     }
+
 
     .modal-header h2 { font-size: 1.25rem; font-weight: 800; margin: 0; }
     .btn-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
 
     .modal-body { padding: 30px; }
-    .description { color: #666; margin-bottom: 25px; line-height: 1.5; }
+    .description { color: var(--text-secondary); margin-bottom: 25px; line-height: 1.5; }
 
     .form-group { margin-bottom: 25px; }
-    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #f0f0f0; font-size: 1rem; font-weight: 600; transition: all 0.2s; }
-    .form-group input:focus { outline: none; border-color: #000; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid var(--border-color); background: var(--bg-main); color: var(--text-primary); font-size: 1rem; font-weight: 600; transition: all 0.2s; }
+    .form-group input:focus { outline: none; border-color: var(--text-primary); }
+
 
     .modal-footer { display: flex; gap: 15px; margin-top: 10px; }
     .btn-cancel, .btn-submit { flex: 1; padding: 14px; border-radius: 14px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
-    .btn-cancel { background: #f8f8f8; color: #666; }
-    .btn-submit { background: #000; color: #fff; }
+    .btn-cancel { background: var(--bg-main); color: var(--text-secondary); }
+    .btn-submit { background: var(--text-primary); color: var(--bg-card); }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
 
     /* Success State Styles */
     .success-content {
-      background: #fcfcfc;
-      border: 1px solid #f0f0f0;
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
       border-radius: 20px;
       padding: 20px;
       margin-bottom: 25px;
       text-align: center;
     }
+
     .code-display { margin-bottom: 20px; }
-    .code-display label { font-size: 0.75rem; font-weight: 800; color: #aaa; text-transform: uppercase; }
+    .code-display label { font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
     .code-value {
       font-size: 2rem;
       font-weight: 900;
-      color: #000;
+      color: var(--text-primary);
       letter-spacing: 2px;
       margin-top: 5px;
     }
@@ -236,9 +253,30 @@ import { finalize, timeout } from 'rxjs';
       gap: 6px;
       transition: all 0.2s;
     }
-    .btn-copy-code { background: #fff; border: 1px solid #eee; color: #333; }
-    .btn-copy-link { background: #000; color: #fff; }
-    .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .btn-copy-code { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); }
+    .btn-copy-link { background: var(--text-primary); color: var(--bg-card); }
+    .btn-copy-code:hover, .btn-copy-link:hover { transform: translateY(-2px); box-shadow: 0 4px 12px var(--shadow-color); }
+
+    .btn-theme-toggle {
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+      color: var(--text-primary);
+    }
+
+    .btn-theme-toggle:hover {
+      background: var(--border-color);
+      transform: scale(1.05);
+    }
+
 
     /* ================================================
        RESPONSIVE — TABLET (769px – 1024px)
@@ -312,8 +350,10 @@ export class NavbarComponent {
     private router: Router,
     private pixelService: PixelService,
     private toastService: ToastService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    public themeService: ThemeService
   ) {}
+
 
   get modalTitle(): string {
     if (this.modalMode === 'success') return '¡Sala Creada!';

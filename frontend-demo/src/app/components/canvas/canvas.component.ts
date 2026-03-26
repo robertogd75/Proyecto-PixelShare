@@ -141,14 +141,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     });
   }
 
-  @HostListener('window:beforeunload', ['$event'])
-  unloadNotification($event: any): void {
-    if (this.isDirty) {
-      $event.returnValue = true;
-    }
-  }
-
   public canDeactivate(): Observable<boolean> | boolean {
+
     if (!this.isDirty) return true;
     
     // Create a fresh subject for this specific navigation attempt
@@ -411,6 +405,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.showExitConfirm = false;
     this.isDirty = false; // Allow navigation now
     this.navigateAnyway$.next(true);
+    this.navigateAnyway$.complete();
     this.router.navigate(['/']);
   }
 
@@ -418,7 +413,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.showExitConfirm = false;
     this.showDownloadMenu = false;
     this.navigateAnyway$.next(false);
+    this.navigateAnyway$.complete();
   }
+
 
 
   public openDownloadMenu(): void {
@@ -451,7 +448,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.toastService.success('Dibujo descargado correctamente');
     this.showDownloadMenu = false;
     this.navigateAnyway$.next(false); // Stay after download if they were prompted
+    this.navigateAnyway$.complete();
   }
+
 
 
 

@@ -28,7 +28,12 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
     private final PixelRepository pixelRepository;
     private final RoomRepository roomRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Set<WebSocketSession> sessions = Collections.synchronizedSet(new HashSet<>());
+    
+    // Map of roomId -> Set of sessions in that room
+    private final Map<Long, Set<WebSocketSession>> roomSessions = new ConcurrentHashMap<>();
+    
+    // Global lock for session management if needed, but we mostly use ConcurrentHashMaps
+    private final Set<WebSocketSession> allSessions = Collections.synchronizedSet(new HashSet<>());
     
     private final Map<String, Long> sessionRoomId = new ConcurrentHashMap<>();
     private final Map<Long, Integer> roomParticipants = new ConcurrentHashMap<>();
@@ -47,7 +52,7 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(@org.springframework.lang.NonNull WebSocketSession session) throws Exception {
-        sessions.add(session);
+        allSessions.add(session);
         try {
             URI uri = session.getUri();
             String query = uri != null ? uri.getQuery() : null;
@@ -82,6 +87,19 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
                     settingsMsg.setAllowAllDraw(roomAllowAllDraw.getOrDefault(roomId, true));
                     settingsMsg.setAllowAllClear(roomAllowAllClear.getOrDefault(roomId, true));
                     session.sendMessage(new TextMessage(objectMapper.writeValueAsString(settingsMsg)));
+
+                    // 1. Add to room sessions map for optimized broadcasting
+                    roomSessions.computeIfAbsent(roomId, k -> Collections.synchronizedSet(new HashSet<>())).add(session);
+
+                    // 2. Initial State Sync: Send existing artwork to the joiner
+                    List<Pixel> history = pixelRepository.findByRoomId(roomId);
+                    if (!history.isEmpty()) {
+                        Pixel initMsg = new Pixel();
+                        initMsg.setType("INIT_PIXELS");
+                        initMsg.setRoomId(roomId);
+                        initMsg.setPixelHistory(history);
+                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(initMsg)));
+                    }
                 }
             }
         } catch (Exception e) {
@@ -91,11 +109,19 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(@org.springframework.lang.NonNull WebSocketSession session, @org.springframework.lang.NonNull CloseStatus status) throws Exception {
-        sessions.remove(session);
+        allSessions.remove(session);
         String sessionId = session.getId();
         Long roomId = sessionRoomId.remove(sessionId);
         
-        if (roomId != null && roomId > 1) { 
+        if (roomId != null) {
+            // Remove from room sessions map
+            Set<WebSocketSession> roomSet = roomSessions.get(roomId);
+            if (roomSet != null) {
+                roomSet.remove(session);
+                if (roomSet.isEmpty()) roomSessions.remove(roomId);
+            }
+
+            if (roomId > 1) { 
             // Check if this was the host
             // Check if this was the host
             String hostSessionId = roomHostSessionId.get(roomId);
@@ -199,18 +225,25 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
         
         String broadcastMessage = objectMapper.writeValueAsString(pixel);
         
-        synchronized (sessions) {
-            for (WebSocketSession s : sessions) {
-                if (s.isOpen()) {
-                    Long sRoomId = sessionRoomId.get(s.getId());
-                    boolean sameRoom = (roomId == null && sRoomId == null) || 
-                                     (roomId != null && roomId.equals(sRoomId));
-                    
-                    if (sameRoom) {
+        // Optimized Broadcast: Only iterate over sessions in the SAME room
+        Set<WebSocketSession> targetSessions = null;
+        if (roomId != null) {
+            targetSessions = roomSessions.get(roomId);
+        } else {
+            // Global canvas (roomId == null) still uses the global list
+            targetSessions = allSessions;
+        }
+
+        if (targetSessions != null) {
+            synchronized (targetSessions) {
+                for (WebSocketSession s : targetSessions) {
+                    if (s.isOpen()) {
                         try {
+                            // Don't send back to sender if it's a regular pixel to save bandwidth
+                            // (though current frontend expects it for confirmation, we'll keep it for now)
                             s.sendMessage(new TextMessage(broadcastMessage));
                         } catch (Exception e) {
-                            // Session might have closed during broadcast
+                            // Session likely closed
                         }
                     }
                 }

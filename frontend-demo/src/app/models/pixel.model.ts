@@ -12,4 +12,5 @@ export interface Pixel {
     height?: number; // Used in RESIZE messages
     allowAllDraw?: boolean;  // For SETTINGS_UPDATE
     allowAllClear?: boolean; // For SETTINGS_UPDATE
+    pixelHistory?: Pixel[]; // For INIT_PIXELS
 }

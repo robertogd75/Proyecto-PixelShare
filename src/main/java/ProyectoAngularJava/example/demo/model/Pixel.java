@@ -6,6 +6,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -44,4 +45,7 @@ public class Pixel {
 
     @Transient
     private boolean allowAllClear; // For SETTINGS_UPDATE messages
+
+    @Transient
+    private List<Pixel> pixelHistory; // For INIT_PIXELS messages
 }

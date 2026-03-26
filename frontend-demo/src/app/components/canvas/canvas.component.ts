@@ -500,6 +500,12 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private setupWebSocket(roomId?: number): void {
     this.pixelService.connect(roomId).subscribe(pixel => {
     // Process special types
+    if (pixel.type === 'INIT_PIXELS' && pixel.pixelHistory) {
+      console.log(`Syncing ${pixel.pixelHistory.length} pixels from history...`);
+      this.processPixelQueue(pixel.pixelHistory);
+      return;
+    }
+
     if (pixel.type === 'HOST_CLOSED') {
       this.isHostClosed = true;
       this.isDirty = false;
@@ -972,19 +978,18 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.ctx.lineTo(pixel.x, pixel.y);
     this.ctx.stroke();
 
+    // Expand dirty bounds for Lazy Sync (Always, so the Bucket tool knows what to sync)
+    const pad = (pixel.size || 5) + 10;
+    const x = Math.min(pixel.x, pixel.fromX ?? pixel.x) - pad;
+    const y = Math.min(pixel.y, pixel.fromY ?? pixel.y) - pad;
+    const w = Math.abs(pixel.x - (pixel.fromX ?? pixel.x)) + pad * 2;
+    const h = Math.abs(pixel.y - (pixel.fromY ?? pixel.y)) + pad * 2;
+    this.updateDirtyBounds(x, y, w, h);
+
     if (isLocal) {
       this.isDirty = true;
-      
       // Send for collaboration
       this.pixelService.sendPixel(pixel);
-
-      // Expand dirty bounds for Lazy Sync
-      const pad = (pixel.size || 5) + 10;
-      const x = Math.min(pixel.x, pixel.fromX ?? pixel.x) - pad;
-      const y = Math.min(pixel.y, pixel.fromY ?? pixel.y) - pad;
-      const w = Math.abs(pixel.x - (pixel.fromX ?? pixel.x)) + pad * 2;
-      const h = Math.abs(pixel.y - (pixel.fromY ?? pixel.y)) + pad * 2;
-      this.updateDirtyBounds(x, y, w, h);
     }
   }
 

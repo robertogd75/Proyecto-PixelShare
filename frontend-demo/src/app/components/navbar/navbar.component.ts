@@ -315,7 +315,20 @@ export class NavbarComponent {
     public themeService: ThemeService,
     public downloadService: DownloadService,
     private drawingService: DrawingStateService
-  ) {}
+  ) {
+    // Listen for confirmation responses from the Canvas modal
+    this.drawingService.confirmResponse$.subscribe(proceed => {
+      if (proceed && this.pendingModalTask) {
+        this.pendingModalTask();
+        this.pendingModalTask = null;
+      } else if (!proceed) {
+        this.pendingModalTask = null;
+      }
+    });
+  }
+
+  private pendingModalTask: (() => void) | null = null;
+
 
 
 
@@ -339,9 +352,14 @@ export class NavbarComponent {
 
   openJoinModal() {
     if (this.drawingService.isDirty) {
-      this.toastService.info('Tienes un dibujo sin guardar. Descárgalo o usa el botón "Salir" de la pizarra antes de entrar en otra sala.', 6000);
+      this.pendingModalTask = () => this.doOpenJoinModal();
+      this.drawingService.requestLeaveConfirmation();
       return;
     }
+    this.doOpenJoinModal();
+  }
+
+  private doOpenJoinModal() {
     this.modalMode = 'join';
     this.roomCode = '';
     this.showModal = true;
@@ -349,14 +367,20 @@ export class NavbarComponent {
 
   openCreateModal() {
     if (this.drawingService.isDirty) {
-      this.toastService.info('Tienes un dibujo sin guardar. Descárgalo o usa el botón "Salir" de la pizarra antes de crear una nueva sala.', 6000);
+      this.pendingModalTask = () => this.doOpenCreateModal();
+      this.drawingService.requestLeaveConfirmation();
       return;
     }
+    this.doOpenCreateModal();
+  }
+
+  private doOpenCreateModal() {
     this.modalMode = 'create';
     this.roomName = '';
     this.showModal = true;
     this.isCreating = false;
   }
+
 
 
   closeModal() {

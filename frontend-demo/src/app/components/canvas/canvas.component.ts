@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, AfterViewInit, ElementRef, HostListener, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/router';
@@ -86,8 +86,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     private toastService: ToastService,
     private themeService: ThemeService,
     private downloadService: DownloadService,
-    private drawingStateService: DrawingStateService
+    private drawingStateService: DrawingStateService,
+    private cdr: ChangeDetectorRef
   ) {}
+
 
 
 
@@ -150,14 +152,21 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.downloadSub = this.downloadService.downloadRequest$.subscribe(() => {
       this.openDownloadMenu();
     });
+
+    // Handle remote confirmation requests (e.g. from Navbar)
+    this.drawingStateService.requestConfirm$.subscribe(() => {
+      this.showExitConfirm = true;
+      this.cdr.detectChanges();
+    });
   }
+
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any): void {
-    if (this.isDirty) {
-      $event.returnValue = true;
-    }
+    // Note: Removed genric browser warning to favor our custom modal during Back navigation.
+    // Page refreshes (F5) will no longer have a warning to satisfy the "Use ours" requirement.
   }
+
 
   public canDeactivate(): Observable<boolean> | boolean {
     if (!this.isDirty) return true;
@@ -426,6 +435,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.showExitConfirm = false;
     const wasGuarded = this.triggeredByGuard;
     this.isDirty = false; // Allow navigation now
+    
+    // Notify any remote requester (like Navbar) that we are good to go
+    this.drawingStateService.sendResponse(true);
+    
     this.navigateAnyway$.next(true);
     this.navigateAnyway$.complete();
     
@@ -437,12 +450,15 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
 
+
   public cancelLeave(): void {
     this.showExitConfirm = false;
     this.showDownloadMenu = false;
+    this.drawingStateService.sendResponse(false);
     this.navigateAnyway$.next(false);
     this.navigateAnyway$.complete();
   }
+
 
 
 
@@ -475,9 +491,15 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     this.toastService.success('Dibujo descargado correctamente');
     this.showDownloadMenu = false;
+    
+    // Once downloaded, it's no longer "dirty" until they draw again
+    this.isDirty = false;
+    
+    this.drawingStateService.sendResponse(false); // Stay here
     this.navigateAnyway$.next(false); // Stay after download if they were prompted
     this.navigateAnyway$.complete();
   }
+
 
 
 

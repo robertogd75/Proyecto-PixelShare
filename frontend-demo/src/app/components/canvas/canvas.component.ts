@@ -7,7 +7,8 @@ import { Pixel } from '../../models/pixel.model';
 import { ToastService } from '../../services/toast.service';
 import { ThemeService } from '../../services/theme.service';
 import { DownloadService } from '../../services/download.service';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject, Observable } from 'rxjs';
+
 
 
 
@@ -99,6 +100,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public downloadFormat: 'png' | 'jpg' = 'png';
   private downloadSub?: Subscription;
 
+  // Navigation Guard States
+  public isDirty = false;
+  private navigateAnyway$ = new Subject<boolean>();
+
+
 
   get canUserDraw(): boolean {
     return this.currentRoomId === undefined || this.isRoomHost || this.allowAllDraw;
@@ -134,6 +140,22 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.openDownloadMenu();
     });
   }
+
+  @HostListener('window:beforeunload', ['$event'])
+  unloadNotification($event: any): void {
+    if (this.isDirty) {
+      $event.returnValue = true;
+    }
+  }
+
+  public canDeactivate(): Observable<boolean> | boolean {
+    if (!this.isDirty) return true;
+    
+    this.showExitConfirm = true;
+    // Return the observable that will emit when user makes a choice in the modal
+    return this.navigateAnyway$.asObservable();
+  }
+
 
 
 
@@ -383,13 +405,17 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public confirmLeave(): void {
     this.showExitConfirm = false;
+    this.isDirty = false; // Allow navigation now
+    this.navigateAnyway$.next(true);
     this.router.navigate(['/']);
   }
 
   public cancelLeave(): void {
     this.showExitConfirm = false;
     this.showDownloadMenu = false;
+    this.navigateAnyway$.next(false);
   }
+
 
   public openDownloadMenu(): void {
     this.showDownloadMenu = true;
@@ -420,10 +446,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     this.toastService.success('Dibujo descargado correctamente');
     this.showDownloadMenu = false;
-    
-    // If we were in the middle of an exit flow, we might want to stay or leave
-    // For now, let's just close the menu as requested.
+    this.navigateAnyway$.next(false); // Stay after download if they were prompted
   }
+
 
 
   public toggleSettingsMenu(): void {
@@ -473,6 +498,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.toastService.info('El anfitrión ha restringido el dibujo a esta sala.');
       return;
     }
+
+    this.isDirty = true; // Mark as dirty on first local action
+
 
     const pos = this.getEventPos(event);
     this.isDrawing = true;
@@ -654,7 +682,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     this.ctx.beginPath();
     if (isLocal) {
+      this.isDirty = true;
       // Local: use current drawing path
+
       if (this.lastPos) {
         this.ctx.moveTo(this.lastPos.x, this.lastPos.y);
         this.ctx.lineTo(pixel.x, pixel.y);
@@ -702,7 +732,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public confirmClear(): void {
     this.showClearConfirm = false;
+    this.isDirty = false; // Canvas is clean now
     const canvas = this.canvasRef.nativeElement;
+
     this.ctx.fillStyle = this.themeBgColor;
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
     this.toastService.success('Pizarra borrada correctamente');

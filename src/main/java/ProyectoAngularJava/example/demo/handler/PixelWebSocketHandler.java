@@ -199,16 +199,17 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
         } else if ("CLEAR".equals(pixel.getType())) {
             boolean canClear = isHost || (roomId != null && roomAllowAllClear.getOrDefault(roomId, false));
             if (!canClear) return;
-        } else if (pixel.getType() == null) {
-            // Drawing pixel
+        } else if (pixel.getType() == null || "FILL".equals(pixel.getType())) {
+            // Drawing pixel or Fill action
             boolean canDraw = roomId == null || isHost || roomAllowAllDraw.getOrDefault(roomId, false);
             if (!canDraw) return;
             
-            // Only save to DB if it's not a real-time control message
+            // Only save to DB if it's not a transient control message
             if (roomId != null) {
                 pixelRepository.save(pixel);
             }
         }
+
         
         String broadcastMessage = objectMapper.writeValueAsString(pixel);
         

@@ -45,7 +45,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public canvasWidth = 2828;  // A4 landscape: width = height * √2
   public canvasHeight = 2000;
   
-  public selectedTool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' = 'brush';
+  public selectedTool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' | 'fill' = 'brush';
+
   private startPos: { x: number, y: number } | null = null;
   private lastPos: { x: number, y: number } | null = null;
 
@@ -381,17 +382,32 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (this.currentRoomId === undefined) return;
 
     this.pixelService.getPixels(this.currentRoomId).subscribe(pixels => {
-      pixels.forEach(p => this.drawPixelLocally(p, false));
+      pixels.forEach(p => {
+        if (p.type === 'FILL') {
+          this.floodFill(p.x, p.y, p.color, true);
+        } else {
+          this.drawPixelLocally(p, false);
+        }
+      });
     });
   }
 
+
   private setupWebSocket(roomId?: number): void {
     this.pixelService.connect(roomId).subscribe(pixel => {
-      if (pixel.type === 'HOST_CLOSED') {
-        this.isHostClosed = true;
-        this.toastService.info('El anfitrión ha cerrado la sala.', 5000);
-        setTimeout(() => this.router.navigate(['/']), 4000);
-      } else if (pixel.type === 'SETTINGS_UPDATE') {
+    // Process special types
+    if (pixel.type === 'HOST_CLOSED') {
+      this.isHostClosed = true;
+      this.isDirty = false;
+      setTimeout(() => this.router.navigate(['/']), 4000);
+      return;
+    }
+
+    if (pixel.type === 'FILL') {
+      this.floodFill(pixel.x, pixel.y, pixel.color, true);
+      return;
+    }
+    if (pixel.type === 'SETTINGS_UPDATE') {
         this.allowAllDraw = !!pixel.allowAllDraw;
         this.allowAllClear = !!pixel.allowAllClear;
         if (!this.isRoomHost) {
@@ -577,7 +593,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (this.showToolMenu) this.showSettingsMenu = false;
   }
 
-  public selectTool(tool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle'): void {
+  public selectTool(tool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' | 'fill'): void {
     this.selectedTool = tool;
     this.showToolMenu = false;
   }
@@ -618,6 +634,15 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         size: this.brushSize,
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       }, true);
+    } else if (this.selectedTool === 'fill') {
+      this.floodFill(pos.x, pos.y, this.currentColor);
+      const fillPixel: Pixel = {
+        x: pos.x, y: pos.y, color: this.currentColor,
+        type: 'FILL',
+        roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
+      };
+      this.pixelService.sendPixel(fillPixel);
+      this.isDrawing = false; // Fill is a single action, not a continuous draw
     }
   }
 
@@ -857,7 +882,62 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.showClearConfirm = false;
   }
 
+  private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): void {
+    const canvas = this.canvasRef.nativeElement;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    // Convert CSS color to RGBA components using a temporary canvas to get precise numbers
+    const tempCtx = document.createElement('canvas').getContext('2d');
+    if (!tempCtx) return;
+    tempCtx.fillStyle = fillColor;
+    const resolvedColor = tempCtx.fillStyle; // Browser resolved color (e.g. #000000)
+    
+    // Read the pixel to get actual RGBA from browser
+    tempCtx.fillRect(0, 0, 1, 1);
+    const targetData = tempCtx.getImageData(0, 0, 1, 1).data;
+    const [r, g, b, a] = targetData;
+    
+    // Create a 32-bit integer for the target color
+    // This is ABGR on little-endian systems (typical for browsers)
+    const targetColor = (a << 24) | (b << 16) | (g << 8) | r;
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data32 = new Uint32Array(imageData.data.buffer);
+    
+    const startIdx = startY * canvas.width + startX;
+    const startColor = data32[startIdx];
+
+    // If already the same color, no work needed
+    if (startColor === targetColor) return;
+
+    const stack: [number, number][] = [[startX, startY]];
+    const width = canvas.width;
+    const height = canvas.height;
+
+    while (stack.length > 0) {
+      const point = stack.pop();
+      if (!point) continue;
+      const [x, y] = point;
+
+      const idx = y * width + x;
+      if (data32[idx] === startColor) {
+        data32[idx] = targetColor;
+
+        // Push neighbors (using simple 4-way fill for robustness)
+        if (x > 0) stack.push([x - 1, y]);
+        if (x < width - 1) stack.push([x + 1, y]);
+        if (y > 0) stack.push([x, y - 1]);
+        if (y < height - 1) stack.push([x, y + 1]);
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    this.isDirty = true;
+  }
+
   private getEventPos(event: any): { x: number, y: number } {
+
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
     

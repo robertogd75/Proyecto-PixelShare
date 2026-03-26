@@ -128,10 +128,12 @@
         <span [ngSwitch]="selectedTool">
           <span *ngSwitchCase="'brush'">🖌️ Pincel</span>
           <span *ngSwitchCase="'eraser'">🧽 Borrador</span>
+          <span *ngSwitchCase="'fill'">🪣 Rellenar</span>
           <span *ngSwitchCase="'line'">📏 Línea</span>
           <span *ngSwitchCase="'rect'">⬜ Rectángulo</span>
           <span *ngSwitchCase="'circle'">⭕ Círculo</span>
         </span>
+
         <span class="arrow">▾</span>
       </div>
       <div class="tool-menu" *ngIf="showToolMenu">
@@ -140,6 +142,9 @@
         </button>
         <button class="tool-item" [class.active]="selectedTool === 'eraser'" (click)="selectTool('eraser')">
           <span class="tool-icon">🧽</span> Borrador
+        </button>
+        <button class="tool-item" [class.active]="selectedTool === 'fill'" (click)="selectTool('fill')">
+          <span class="tool-icon">🪣</span> Rellenar
         </button>
         <button class="tool-item" [class.active]="selectedTool === 'line'" (click)="selectTool('line')">
           <span class="tool-icon">📏</span> Línea
@@ -151,6 +156,7 @@
           <span class="tool-icon">⭕</span> Círculo
         </button>
       </div>
+
     </div>
 
     <div class="tool-group">

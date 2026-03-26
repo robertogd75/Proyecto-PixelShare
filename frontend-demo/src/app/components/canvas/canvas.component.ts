@@ -47,6 +47,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public cursorY = 0;
   public cursorVisible = false;
 
+  /** Tracks whether the physical mouse button is pressed anywhere on the page */
+  private mouseButtonPressed = false;
+
   /** The canvas-wrapper uses cursor:none — we draw our own visible cursor instead */
   get canvasCursor(): string { return 'none'; }
 
@@ -384,8 +387,14 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.cursorY = event.clientY - rect.top;
   }
 
+  @HostListener('document:mousedown')
+  onDocumentMouseDown(): void {
+    this.mouseButtonPressed = true;
+  }
+
   @HostListener('document:mouseup')
   onDocumentMouseUp(): void {
+    this.mouseButtonPressed = false;
     if (this.isDrawing) {
       this.stopDrawing();
     }
@@ -405,6 +414,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public draw(event: any): void {
+    // If the mouse button is not physically held, stop drawing (handles leave+re-enter case)
+    if (!this.mouseButtonPressed) {
+      if (this.isDrawing) this.cancelDrawing();
+      return;
+    }
     if (!this.isDrawing || !this.canUserDraw) return;
     if (event.type === 'touchmove') event.preventDefault();
 

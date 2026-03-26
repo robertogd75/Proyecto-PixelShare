@@ -394,45 +394,76 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private processPixelQueue(pixels: Pixel[]): void {
     if (pixels.length === 0) return;
 
-    const CHUNK_SIZE = 400; // Regular pixels per frame
     let index = 0;
+    const canvas = this.canvasRef.nativeElement;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
 
     const process = async () => {
       const startTime = performance.now();
       
-      // Process a chunk of pixels, but stop early if we hit a 'FILL' or spend too much time
-      while (index < pixels.length && performance.now() - startTime < 16) {
+      // Overdrive: Use a shared buffer for a batch of fills to avoid redundant GPU transfers
+      let batchImageData: ImageData | null = null;
+      let data32: Uint32Array | null = null;
+      let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+      let batchModified = false;
+
+      while (index < pixels.length && performance.now() - startTime < 32) { // 32ms budget per batch
         const p = pixels[index++];
         
         if (p.type === 'FILL') {
-          await this.floodFill(p.x, p.y, p.color, true);
-          // Yield after a fill to let the browser breath
-          setTimeout(process, 0);
-          return;
-        } else if (p.type === 'CLEAR') {
-
-          this.ctx.fillStyle = this.themeBgColor;
-          this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-        } else if (p.type === 'RESIZE' && p.width && p.height) {
-          this.canvasWidth = p.width;
-          this.canvasHeight = p.height;
-          this.resizeCanvas();
+          // Initialize batch buffer if needed
+          if (!batchImageData) {
+            batchImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            data32 = new Uint32Array(batchImageData.data.buffer);
+          }
+          
+          // Perform fill on the shared buffer
+          const result = await this.executeFloodFillOnBuffer(data32!, p.x, p.y, p.color, canvas.width, canvas.height, false);
+          if (result) {
+            minX = Math.min(minX, result.minX);
+            minY = Math.min(minY, result.minY);
+            maxX = Math.max(maxX, result.maxX);
+            maxY = Math.max(maxY, result.maxY);
+            batchModified = true;
+          }
         } else {
-          this.drawPixelLocally(p, false);
+          // Before drawing regular pixels, commit any pending fill batch
+          if (batchModified && batchImageData) {
+            ctx.putImageData(batchImageData, 0, 0, minX, minY, maxX - minX + 1, maxY - minY + 1);
+            batchModified = false; // Reset for next potential batch
+            batchImageData = null; // Re-fetch for next batch to incorporate this pixel
+            data32 = null;
+          }
+
+          if (p.type === 'CLEAR') {
+            this.ctx.fillStyle = this.themeBgColor;
+            this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+          } else if (p.type === 'RESIZE' && p.width && p.height) {
+            this.canvasWidth = p.width;
+            this.canvasHeight = p.height;
+            this.resizeCanvas();
+          } else {
+            this.drawPixelLocally(p, false);
+          }
         }
       }
 
+      // Final commit for the current batch
+      if (batchModified && batchImageData) {
+        ctx.putImageData(batchImageData, 0, 0, minX, minY, maxX - minX + 1, maxY - minY + 1);
+      }
+
       if (index < pixels.length) {
-        // Schedule next batch for the next frame
         requestAnimationFrame(process);
       } else {
-        // All history loaded, clear dirty flag if it was a fresh load
         this.isDirty = false;
       }
     };
 
     process();
   }
+
 
 
 
@@ -447,8 +478,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     }
 
     if (pixel.type === 'FILL') {
+      // Overdrive: Filter self-broadcasted fills
+      if (this.isLastFillOurs(pixel)) return;
       this.floodFill(pixel.x, pixel.y, pixel.color, true);
-      return;
+    } else {
+      this.processPixelQueue([pixel]);
     }
     if (pixel.type === 'SETTINGS_UPDATE') {
         this.allowAllDraw = !!pixel.allowAllDraw;
@@ -678,7 +712,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       }, true);
     } else if (this.selectedTool === 'fill') {
-      if (this.isFilling) return; // Titanium 2.0 Bounce-Guard: Prevent redundant fills
+      if (this.isFilling) return;
+      this.lastLocalFillX = pos.x;
+      this.lastLocalFillY = pos.y;
+      this.lastLocalFillColor = this.currentColor;
       this.floodFill(pos.x, pos.y, this.currentColor);
       const fillPixel: Pixel = {
         x: pos.x, y: pos.y, color: this.currentColor,
@@ -928,10 +965,17 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   private lastFillColor: string = '';
   private lastTargetColor32: number = 0;
+  private lastLocalFillX: number = -1;
+  private lastLocalFillY: number = -1;
+  private lastLocalFillColor: string = '';
+
+  private isLastFillOurs(p: Pixel): boolean {
+    return p.x === this.lastLocalFillX && p.y === this.lastLocalFillY && p.color === this.lastLocalFillColor;
+  }
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): Promise<void> {
     return new Promise(async (resolve) => {
-      // isFilling prevents overlapping fills and redundant messages
+      // isFilling prevents overlapping local fills
       if (this.isFilling && !isRemote) {
         resolve();
         return;
@@ -944,101 +988,19 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.isFilling = true;
       
       try {
-        let targetColor: number;
-        if (fillColor === this.lastFillColor) {
-          targetColor = this.lastTargetColor32;
-        } else {
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = 1; tempCanvas.height = 1;
-          const tCtx = tempCanvas.getContext('2d')!;
-          tCtx.fillStyle = fillColor;
-          tCtx.fillRect(0, 0, 1, 1);
-          const [r, g, b, a] = tCtx.getImageData(0, 0, 1, 1).data;
-          targetColor = (a << 24) | (b << 16) | (g << 8) | r;
-          this.lastFillColor = fillColor;
-          this.lastTargetColor32 = targetColor;
-        }
-
         const width = canvas.width;
         const height = canvas.height;
         const imageData = ctx.getImageData(0, 0, width, height);
         const data32 = new Uint32Array(imageData.data.buffer);
-        const startIdx = startY * width + startX;
-        const startColor = data32[startIdx];
 
-        if (startColor === targetColor) {
-          this.isFilling = false;
-          resolve();
-          return;
+        const result = await this.executeFloodFillOnBuffer(data32, startX, startY, fillColor, width, height, true);
+        
+        if (result) {
+          const dirtyW = result.maxX - result.minX + 1;
+          const dirtyH = result.maxY - result.minY + 1;
+          ctx.putImageData(imageData, 0, 0, result.minX, result.minY, dirtyW, dirtyH);
+          this.isDirty = true;
         }
-
-        let minX = startX, maxX = startX;
-        let minY = startY, maxY = startY;
-
-        const stack: number[] = [startX, startY];
-        let lastYieldTime = performance.now();
-        let iterations = 0;
-        const maxIter = 10000000;
-
-        while (stack.length > 0 && iterations < maxIter) {
-          iterations++;
-          
-          // Yield only when we've been working long enough (Titanium 2.0: 50ms budget)
-          // We only check time every 1000 iterations to reduce performance.now() overhead
-          if (iterations % 1000 === 0) {
-            if (performance.now() - lastYieldTime > 50) {
-              await new Promise(r => setTimeout(r, 0));
-              lastYieldTime = performance.now();
-            }
-          }
-
-          const y = stack.pop()!;
-          const x = stack.pop()!;
-
-          let left = x, right = x;
-          while (left > 0 && data32[y * width + (left - 1)] === startColor) left--;
-          while (right < width - 1 && data32[y * width + (right + 1)] === startColor) right++;
-
-          if (left < minX) minX = left;
-          if (right > maxX) maxX = right;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-
-          for (let i = left; i <= right; i++) {
-            data32[y * width + i] = targetColor;
-          }
-
-          // Optimized Scanning (GC-Free: no inner functions)
-          if (y > 0) {
-            let spanAdded = false;
-            const yAbove = y - 1;
-            for (let i = left; i <= right; i++) {
-              if (data32[yAbove * width + i] === startColor) {
-                if (!spanAdded) {
-                  stack.push(i, yAbove);
-                  spanAdded = true;
-                }
-              } else spanAdded = false;
-            }
-          }
-          if (y < height - 1) {
-            let spanAdded = false;
-            const yBelow = y + 1;
-            for (let i = left; i <= right; i++) {
-              if (data32[yBelow * width + i] === startColor) {
-                if (!spanAdded) {
-                  stack.push(i, yBelow);
-                  spanAdded = true;
-                }
-              } else spanAdded = false;
-            }
-          }
-        }
-
-        const dirtyW = maxX - minX + 1;
-        const dirtyH = maxY - minY + 1;
-        ctx.putImageData(imageData, 0, 0, minX, minY, dirtyW, dirtyH);
-        this.isDirty = true;
       } catch (err) {
         console.error('Flood fill failed', err);
       } finally {
@@ -1047,6 +1009,104 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       }
     });
   }
+
+  /**
+   * Overdrive Core: Performs flood fill algorithms directly on a 32-bit buffer.
+   * This is used by both the UI (floodFill) and the Batch History Processor.
+   */
+  private async executeFloodFillOnBuffer(
+    data32: Uint32Array, 
+    startX: number, 
+    startY: number, 
+    fillColor: string, 
+    width: number, 
+    height: number,
+    yieldEnabled: boolean = false
+  ): Promise<{minX: number, minY: number, maxX: number, maxY: number} | null> {
+    
+    let targetColor: number;
+    if (fillColor === this.lastFillColor) {
+      targetColor = this.lastTargetColor32;
+    } else {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 1; tempCanvas.height = 1;
+      const tCtx = tempCanvas.getContext('2d')!;
+      tCtx.fillStyle = fillColor;
+      tCtx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = tCtx.getImageData(0, 0, 1, 1).data;
+      targetColor = (a << 24) | (b << 16) | (g << 8) | r;
+      this.lastFillColor = fillColor;
+      this.lastTargetColor32 = targetColor;
+    }
+
+    const startIdx = startY * width + startX;
+    const startColor = data32[startIdx];
+
+    if (startColor === targetColor) return null;
+
+    let minX = startX, maxX = startX;
+    let minY = startY, maxY = startY;
+
+    const stack: number[] = [startX, startY];
+    let lastYieldTime = performance.now();
+    let iterations = 0;
+    const maxIter = 10000000;
+
+    while (stack.length > 0 && iterations < maxIter) {
+      iterations++;
+      
+      if (yieldEnabled && iterations % 1000 === 0) {
+        if (performance.now() - lastYieldTime > 40) {
+          await new Promise(r => setTimeout(r, 0));
+          lastYieldTime = performance.now();
+        }
+      }
+
+      const y = stack.pop()!;
+      const x = stack.pop()!;
+
+      let left = x, right = x;
+      while (left > 0 && data32[y * width + (left - 1)] === startColor) left--;
+      while (right < width - 1 && data32[y * width + (right + 1)] === startColor) right++;
+
+      if (left < minX) minX = left;
+      if (right > maxX) maxX = right;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+
+      for (let i = left; i <= right; i++) {
+        data32[y * width + i] = targetColor;
+      }
+
+      if (y > 0) {
+        let spanAdded = false;
+        const yAbove = y - 1;
+        for (let i = left; i <= right; i++) {
+          if (data32[yAbove * width + i] === startColor) {
+            if (!spanAdded) {
+              stack.push(i, yAbove);
+              spanAdded = true;
+            }
+          } else spanAdded = false;
+        }
+      }
+      if (y < height - 1) {
+        let spanAdded = false;
+        const yBelow = y + 1;
+        for (let i = left; i <= right; i++) {
+          if (data32[yBelow * width + i] === startColor) {
+            if (!spanAdded) {
+              stack.push(i, yBelow);
+              spanAdded = true;
+            }
+          } else spanAdded = false;
+        }
+      }
+    }
+
+    return { minX, minY, maxX, maxY };
+  }
+
 
 
 

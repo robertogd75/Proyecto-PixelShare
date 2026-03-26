@@ -133,6 +133,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private isRouterNavigating = false;
   private exitAfterDownload = false;
   private hasHistoryTrap = false;
+  private currentStrokeBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
 
 
 
@@ -727,6 +728,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.startPos = pos;
     this.lastPos = pos;
 
+    // Reset stroke bounds for a new stroke
+    this.currentStrokeBounds = { minX: pos.x, minY: pos.y, maxX: pos.x, maxY: pos.y };
+
     if (this.selectedTool === 'brush' || this.selectedTool === 'eraser') {
       this.drawPixelLocally({
         x: pos.x,
@@ -748,6 +752,16 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       };
       this.pixelService.sendPixel(fillPixel);
       this.isDrawing = false; // Fill is a single action
+    }
+
+    if (this.isDrawing) {
+      const pad = (this.brushSize || 5) + 5;
+      this.currentStrokeBounds = {
+        minX: pos.x - pad,
+        minY: pos.y - pad,
+        maxX: pos.x + pad,
+        maxY: pos.y + pad
+      };
     }
   }
 
@@ -807,6 +821,12 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.finalizeShape();
     }
 
+    // Deferred Sync: sync the buffer ONLY at the end of the stroke
+    const b = this.currentStrokeBounds;
+    if (b.minX !== Infinity) {
+      this.syncBufferRegion(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
+    }
+
     this.isDrawing = false;
     this.lastPos = null;
     this.startPos = null;
@@ -818,6 +838,14 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     if (event.type === 'touchmove') event.preventDefault();
 
     const pos = this.getEventPos(event);
+
+    if (this.isDrawing) {
+      const pad = (this.brushSize || 5) + 10;
+      this.currentStrokeBounds.minX = Math.min(this.currentStrokeBounds.minX, pos.x - pad);
+      this.currentStrokeBounds.minY = Math.min(this.currentStrokeBounds.minY, pos.y - pad);
+      this.currentStrokeBounds.maxX = Math.max(this.currentStrokeBounds.maxX, pos.x + pad);
+      this.currentStrokeBounds.maxY = Math.max(this.currentStrokeBounds.maxY, pos.y + pad);
+    }
 
     if (this.selectedTool === 'brush' || this.selectedTool === 'eraser') {
       const pixel: Pixel = {
@@ -949,13 +977,16 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     }
     this.ctx.stroke();
 
-    // Surgical sync: update only the bounding box of this specific stroke/pixel
-    const pad = (pixel.size || 5) + 2;
-    const x = Math.min(pixel.x, pixel.fromX ?? pixel.x) - pad;
-    const y = Math.min(pixel.y, pixel.fromY ?? pixel.y) - pad;
-    const w = Math.abs(pixel.x - (pixel.fromX ?? pixel.x)) + pad * 2;
-    const h = Math.abs(pixel.y - (pixel.fromY ?? pixel.y)) + pad * 2;
-    this.syncBufferRegion(x, y, w, h);
+    // Deferred Sync for remote drawing
+    if (!isLocal) {
+      const pad = (pixel.size || 5) + 5;
+      const x = Math.min(pixel.x, pixel.fromX ?? pixel.x) - pad;
+      const y = Math.min(pixel.y, pixel.fromY ?? pixel.y) - pad;
+      const w = Math.abs(pixel.x - (pixel.fromX ?? pixel.x)) + pad * 2;
+      const h = Math.abs(pixel.y - (pixel.fromY ?? pixel.y)) + pad * 2;
+      this.syncBufferRegion(x, y, w, h);
+    }
+    // Local sync is now handled in stopDrawing() for performance
   }
 
   private syncBufferRegion(x: number, y: number, w: number, h: number): void {

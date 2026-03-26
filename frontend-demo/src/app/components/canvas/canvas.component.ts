@@ -656,6 +656,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public startDrawing(event: any): void {
+    if (this.isFilling) return;
     if (!this.canUserDraw) {
       this.toastService.info('El anfitrión ha restringido el dibujo a esta sala.');
       return;
@@ -752,7 +753,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public draw(event: any): void {
-    if (!this.isDrawing || !this.canUserDraw) return;
+    if (this.isFilling || !this.isDrawing || !this.canUserDraw) return;
     if (event.type === 'touchmove') event.preventDefault();
 
     const pos = this.getEventPos(event);
@@ -929,9 +930,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private lastTargetColor32: number = 0;
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve) => {
       if (this.isFilling) {
-        resolve(); // Or queue it, but for now just skip overlapping inputs
+        resolve();
         return;
       }
       
@@ -940,6 +941,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       if (!ctx) { resolve(); return; }
 
       this.isFilling = true;
+      canvas.style.cursor = 'wait';
       
       try {
         let targetColor: number;
@@ -957,89 +959,66 @@ export class CanvasComponent implements OnInit, AfterViewInit {
           this.lastTargetColor32 = targetColor;
         }
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const width = canvas.width;
         const height = canvas.height;
+        const imageData = ctx.getImageData(0, 0, width, height);
         const data32 = new Uint32Array(imageData.data.buffer);
         const startIdx = startY * width + startX;
         const startColor = data32[startIdx];
 
         if (startColor === targetColor) {
           this.isFilling = false;
+          canvas.style.cursor = '';
           resolve();
           return;
         }
 
-        const workerScript = `
-          self.onmessage = function(e) {
-            const { buffer, width, height, startX, startY, startColor, targetColor } = e.data;
-            const data32 = new Uint32Array(buffer);
-            const stack = [startX, startY];
-            let safety = 0;
-            const maxIter = 5000000;
+        const stack: number[] = [startX, startY];
+        let spansProcessed = 0;
+        const maxIter = 10000000;
 
-            while (stack.length > 0 && safety < maxIter) {
-              safety++;
-              const y = stack.pop();
-              const x = stack.pop();
+        while (stack.length > 0 && spansProcessed < maxIter) {
+          spansProcessed++;
+          if (spansProcessed % 1000 === 0) {
+            await new Promise(r => setTimeout(r, 0));
+          }
 
-              let left = x;
-              while (left > 0 && data32[y * width + (left - 1)] === startColor) { left--; }
-              let right = x;
-              while (right < width - 1 && data32[y * width + (right + 1)] === startColor) { right++; }
+          const y = stack.pop()!;
+          const x = stack.pop()!;
 
-              for (let i = left; i <= right; i++) {
-                data32[y * width + i] = targetColor;
-                if (y > 0 && data32[(y - 1) * width + i] === startColor) {
-                  if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
-                    stack.push(i, y - 1);
-                  }
-                }
-                if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
-                  if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
-                    stack.push(i, y + 1);
-                  }
-                }
+          let left = x;
+          while (left > 0 && data32[y * width + (left - 1)] === startColor) left--;
+          let right = x;
+          while (right < width - 1 && data32[y * width + (right + 1)] === startColor) right++;
+
+          for (let i = left; i <= right; i++) {
+            data32[y * width + i] = targetColor;
+            if (y > 0 && data32[(y - 1) * width + i] === startColor) {
+              if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
+                stack.push(i, y - 1);
               }
             }
-            self.postMessage({ buffer }, [buffer]);
-          };
-        `;
+            if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
+              if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
+                stack.push(i, y + 1);
+              }
+            }
+          }
+        }
 
-        const blob = new Blob([workerScript], { type: 'application/javascript' });
-        const workerUrl = URL.createObjectURL(blob);
-        const worker = new Worker(workerUrl);
-
-        worker.onmessage = (e) => {
-          const buffer = e.data.buffer;
-          const resultImageData = new ImageData(new Uint8ClampedArray(buffer), width, height);
-          ctx.putImageData(resultImageData, 0, 0);
-          this.isDirty = true;
-          this.isFilling = false;
-          worker.terminate();
-          URL.revokeObjectURL(workerUrl);
-          resolve();
-        };
-
-
-        worker.onerror = (err) => {
-          console.error('Flood fill worker error', err);
-          this.isFilling = false;
-          worker.terminate();
-          URL.revokeObjectURL(workerUrl);
-          reject(err);
-        };
-
-        const buffer = imageData.data.buffer;
-        worker.postMessage({
-          buffer, width, height, startX, startY, startColor, targetColor
-        }, [buffer]);
+        ctx.putImageData(imageData, 0, 0);
+        this.isDirty = true;
       } catch (err) {
+        console.error('Flood fill failed', err);
+      } finally {
         this.isFilling = false;
-        reject(err);
+        canvas.style.cursor = '';
+        resolve();
       }
     });
   }
+
+
 
 
 

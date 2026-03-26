@@ -115,6 +115,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
   private navigateAnyway$ = new Subject<boolean>();
   private triggeredByGuard = false;
+  private isRouterNavigating = false;
+
 
 
 
@@ -163,9 +165,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   @HostListener('window:beforeunload', ['$event'])
   unloadNotification($event: any): void {
-    // Note: Removed genric browser warning to favor our custom modal during Back navigation.
-    // Page refreshes (F5) will no longer have a warning to satisfy the "Use ours" requirement.
+    // Only show the native browser dialog if we are NOT currently handled by the Angular router guard.
+    // This allows our custom modal to win for "Back" button while F5 still gets native protection.
+    if (this.isDirty && !this.isRouterNavigating) {
+      $event.returnValue = true;
+    }
   }
+
 
 
   public canDeactivate(): Observable<boolean> | boolean {
@@ -173,14 +179,19 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     
     // Create a fresh subject for this specific navigation attempt
     this.triggeredByGuard = true;
+    this.isRouterNavigating = true; // Block the native beforeunload dialog for this router event
     this.navigateAnyway$ = new Subject<boolean>();
     this.showExitConfirm = true;
     
     // Return the observable that will emit when user makes a choice in the modal
     return this.navigateAnyway$.pipe(
-      finalize(() => this.triggeredByGuard = false)
+      finalize(() => {
+        this.triggeredByGuard = false;
+        this.isRouterNavigating = false; // Unblock native protection after decision
+      })
     );
   }
+
 
 
 

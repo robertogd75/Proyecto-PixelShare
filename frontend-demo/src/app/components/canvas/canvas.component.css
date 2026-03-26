@@ -937,14 +937,16 @@ input:checked+.slider:before {
 
 
 .active-tool-display:hover {
-  background: #eee;
-  border-color: #ddd;
+  background: var(--border-color);
+  border-color: var(--text-muted);
 }
+
 
 .active-tool-display .arrow {
   font-size: 0.7rem;
-  color: #888;
+  color: var(--text-muted);
 }
+
 
 .tool-menu {
   position: absolute;

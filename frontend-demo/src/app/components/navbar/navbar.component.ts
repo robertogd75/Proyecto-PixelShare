@@ -271,13 +271,14 @@ import { DownloadService } from '../../services/download.service';
       }
 
       /* Modal full-width on mobile */
-      .modal-overlay { padding: 12px; align-items: flex-end; }
+      .modal-overlay { padding: 12px; }
 
       .modal-card {
-        border-radius: 20px 20px 16px 16px;
+        border-radius: 20px 20px 24px 24px;
         max-width: 100%;
         padding: 20px;
       }
+
 
       .modal-header-simple { margin-bottom: 10px; }
 

@@ -151,10 +151,14 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public canDeactivate(): Observable<boolean> | boolean {
     if (!this.isDirty) return true;
     
+    // Create a fresh subject for this specific navigation attempt
+    this.navigateAnyway$ = new Subject<boolean>();
     this.showExitConfirm = true;
+    
     // Return the observable that will emit when user makes a choice in the modal
     return this.navigateAnyway$.asObservable();
   }
+
 
 
 

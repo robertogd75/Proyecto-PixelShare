@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, ElementRef, HostListener, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, AfterViewInit, ElementRef, HostListener, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/router';
@@ -21,7 +21,7 @@ import { DrawingStateService } from '../../services/drawing-state.service';
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.css']
 })
-export class CanvasComponent implements OnInit, AfterViewInit {
+export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('canvasElement', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('tempCanvas', { static: true }) tempCanvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
@@ -139,6 +139,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   // Throttling for collaborative performance
   private lastSendTime = 0;
   private lastSentPos: { x: number, y: number } | null = null;
+  
+  // Performance Architecture (v2): Frame-Aligned Rendering & Pulsed Emission
+  private incomingBuffer: Pixel[] = [];
+  private outgoingBuffer: Pixel[] = [];
+  private lastPulseTime = 0;
+  private animationFrameId: number | null = null;
+  private lastFillEvent: Pixel | null = null;
 
 
 
@@ -185,6 +192,15 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.showExitConfirm = true;
       this.cdr.detectChanges();
     });
+
+    this.renderLoop(); // Start high-performance tick loop
+  }
+
+  ngOnDestroy(): void {
+    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+    if (this.currentRoomId !== undefined) {
+      this.pixelService.disconnect(this.currentRoomId);
+    }
   }
 
 
@@ -494,6 +510,37 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     process();
   }
 
+  /**
+   * Performance Architecture (v2): Tick-system Render Loop
+   * Drains the incoming buffer and pulses the outgoing buffer.
+   */
+  private renderLoop(): void {
+    // 1. Process Incoming Batch
+    if (this.incomingBuffer.length > 0) {
+      const batch = [...this.incomingBuffer];
+      this.incomingBuffer = [];
+      batch.forEach(p => this.drawPixelLocally(p, false));
+    }
+
+    // 2. Pulsed Outgoing Emission (30ms pulse)
+    const now = performance.now();
+    if (now - this.lastPulseTime > 30 && this.outgoingBuffer.length > 0) {
+      const batch = [...this.outgoingBuffer];
+      this.outgoingBuffer = [];
+      this.pixelService.sendPixels(batch);
+      this.lastPulseTime = now;
+    }
+
+    this.animationFrameId = requestAnimationFrame(() => this.renderLoop());
+  }
+
+  private isLastFillOurs(pixel: Pixel): boolean {
+    if (!this.lastFillEvent) return false;
+    return pixel.x === this.lastFillEvent.x && 
+           pixel.y === this.lastFillEvent.y && 
+           pixel.color === this.lastFillEvent.color;
+  }
+
 
 
 
@@ -517,9 +564,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       // Overdrive: Filter self-broadcasted fills
       if (this.isLastFillOurs(pixel)) return;
       this.floodFill(pixel.x, pixel.y, pixel.color, true);
-    } else {
-      this.processPixelQueue([pixel]);
+    } else if (pixel.type === 'RECT' || pixel.type === 'CIRCLE' || pixel.type === 'LINE') {
+      this.drawShapeLocally(pixel);
+    } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
+      // High Performance: Queue pixel for frame-aligned rendering
+      this.incomingBuffer.push(pixel);
     }
+
     if (pixel.type === 'SETTINGS_UPDATE') {
         this.allowAllDraw = !!pixel.allowAllDraw;
         this.allowAllClear = !!pixel.allowAllClear;
@@ -535,11 +586,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         const canvas = this.canvasRef.nativeElement;
         this.ctx.fillStyle = this.themeBgColor;
         this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      } else if (pixel.type === 'RECT' || pixel.type === 'CIRCLE' || pixel.type === 'LINE') {
-        this.drawShapeLocally(pixel);
-      } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
-        this.drawPixelLocally(pixel, false);
+        if (this.canvasBuffer) this.canvasBuffer.fill(this.colorToUint32(this.themeBgColor));
       }
     });
   }
@@ -774,7 +821,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         type: 'FILL',
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       };
-      this.pixelService.sendPixel(fillPixel);
+      this.lastFillEvent = fillPixel;
+      this.outgoingBuffer.push(fillPixel);
       this.isDrawing = false; // Fill is a single action
     }
 
@@ -927,7 +975,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     }
 
     this.drawShapeLocally(pixel);
-    this.pixelService.sendPixel(pixel);
+    this.outgoingBuffer.push(pixel);
   }
 
   private drawShapeLocally(pixel: Pixel): void {
@@ -988,8 +1036,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
     if (isLocal) {
       this.isDirty = true;
-      // Send for collaboration
-      this.pixelService.sendPixel(pixel);
+      // Send for collaboration via pulsed buffer
+      this.outgoingBuffer.push(pixel);
     }
   }
 
@@ -1081,7 +1129,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         type: 'CLEAR',
         roomId: this.currentRoomId
       };
-      this.pixelService.sendPixel(clearMsg);
+      this.outgoingBuffer.push(clearMsg);
     }
   }
 
@@ -1095,9 +1143,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private lastLocalFillY: number = -1;
   private lastLocalFillColor: string = '';
 
-  private isLastFillOurs(p: Pixel): boolean {
-    return p.x === this.lastLocalFillX && p.y === this.lastLocalFillY && p.color === this.lastLocalFillColor;
-  }
+ 
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): Promise<void> {
     return new Promise(async (resolve) => {

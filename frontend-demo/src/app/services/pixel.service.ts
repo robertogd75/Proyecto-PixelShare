@@ -40,4 +40,16 @@ export class PixelService {
     sendPixel(pixel: Pixel): void {
         this.socket$?.next(pixel);
     }
+
+    sendPixels(pixels: Pixel[]): void {
+        if (!this.socket$) return;
+        pixels.forEach(p => this.socket$?.next(p));
+    }
+
+    disconnect(roomId?: number): void {
+        if (this.socket$) {
+            this.socket$.complete();
+            this.socket$ = null;
+        }
+    }
 }

@@ -254,6 +254,16 @@ canvas {
   box-shadow: 0 10px 40px rgba(0,0,0,0.2);
 }
 
+/* Custom visible brush cursor circle */
+.brush-cursor {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid black;
+  box-shadow: 0 0 0 1.5px white;
+  pointer-events: none;
+  z-index: 100;
+}
+
 .temp-canvas {
   position: absolute;
   top: 0;

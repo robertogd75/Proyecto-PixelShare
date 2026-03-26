@@ -70,12 +70,25 @@
              [class.is-restricted]="isDrawRestricted"
              [style.cursor]="canvasCursor"
              (mousedown)="startDrawing($event)"
-             (mousemove)="draw($event)"
+             (mousemove)="draw($event); onCanvasMouseMove($event)"
              (mouseup)="stopDrawing()"
+             (mouseenter)="cursorVisible = true"
              (mouseleave)="cancelDrawing()"
              (touchstart)="startDrawing($event)"
              (touchmove)="draw($event)"
              (touchend)="stopDrawing()">
+
+          <!-- Custom visible brush cursor -->
+          <div class="brush-cursor"
+               *ngIf="cursorVisible"
+               [style.left.px]="cursorX"
+               [style.top.px]="cursorY"
+               [style.width.px]="cursorSize"
+               [style.height.px]="cursorSize"
+               [style.border-color]="cursorBorderColor"
+               [style.margin-left.px]="-cursorSize / 2"
+               [style.margin-top.px]="-cursorSize / 2">
+          </div>
           <canvas #canvasElement
                   [style.width.px]="canvasWidth * zoomLevel"
                   [style.height.px]="canvasHeight * zoomLevel"

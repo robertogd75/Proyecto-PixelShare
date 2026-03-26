@@ -42,10 +42,20 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private startPos: { x: number, y: number } | null = null;
   private lastPos: { x: number, y: number } | null = null;
 
-  /** Returns a CSS cursor that is always visible over the white canvas */
-  get canvasCursor(): string {
-    if (this.selectedTool === 'eraser') return 'cell';
-    return 'crosshair';
+  // Custom cursor state
+  public cursorX = 0;
+  public cursorY = 0;
+  public cursorVisible = false;
+
+  /** The canvas-wrapper uses cursor:none — we draw our own visible cursor instead */
+  get canvasCursor(): string { return 'none'; }
+
+  /** Pixel size of the brush preview circle in screen pixels */
+  get cursorSize(): number { return Math.max(8, this.brushSize * this.zoomLevel); }
+
+  /** Cursor border color: contrast ring so it's always visible on any background */
+  get cursorBorderColor(): string {
+    return this.selectedTool === 'eraser' ? '#666' : this.currentColor;
   }
 
   constructor(
@@ -362,11 +372,20 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.isDrawing = false;
     this.lastPos = null;
     this.startPos = null;
+    this.cursorVisible = false;
     this.tempCtx?.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
   }
 
-  @HostListener('window:mouseup')
-  onWindowMouseUp(): void {
+  /** Track cursor position for the brush preview indicator */
+  public onCanvasMouseMove(event: MouseEvent): void {
+    const wrapper = (event.currentTarget as HTMLElement);
+    const rect = wrapper.getBoundingClientRect();
+    this.cursorX = event.clientX - rect.left;
+    this.cursorY = event.clientY - rect.top;
+  }
+
+  @HostListener('document:mouseup')
+  onDocumentMouseUp(): void {
     if (this.isDrawing) {
       this.stopDrawing();
     }

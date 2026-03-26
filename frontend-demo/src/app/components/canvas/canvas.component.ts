@@ -5,9 +5,11 @@ import { ActivatedRoute, Router, RouterModule, UrlSegment } from '@angular/route
 import { PixelService } from '../../services/pixel.service';
 import { Pixel } from '../../models/pixel.model';
 import { ToastService } from '../../services/toast.service';
+import { finalize, Subscription, Subject, Observable } from 'rxjs';
 import { ThemeService } from '../../services/theme.service';
 import { DownloadService } from '../../services/download.service';
-import { Subscription, Subject, Observable } from 'rxjs';
+import { DrawingStateService } from '../../services/drawing-state.service';
+
 
 
 
@@ -83,8 +85,10 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     private router: Router,
     private toastService: ToastService,
     private themeService: ThemeService,
-    private downloadService: DownloadService
+    private downloadService: DownloadService,
+    private drawingStateService: DrawingStateService
   ) {}
+
 
 
 
@@ -101,8 +105,15 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private downloadSub?: Subscription;
 
   // Navigation Guard States
-  public isDirty = false;
+  private _isDirty = false;
+  get isDirty(): boolean { return this._isDirty; }
+  set isDirty(val: boolean) {
+    this._isDirty = val;
+    this.drawingStateService.setDirty(val);
+  }
   private navigateAnyway$ = new Subject<boolean>();
+  private triggeredByGuard = false;
+
 
 
 
@@ -141,17 +152,27 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     });
   }
 
-  public canDeactivate(): Observable<boolean> | boolean {
+  @HostListener('window:beforeunload', ['$event'])
+  unloadNotification($event: any): void {
+    if (this.isDirty) {
+      $event.returnValue = true;
+    }
+  }
 
+  public canDeactivate(): Observable<boolean> | boolean {
     if (!this.isDirty) return true;
     
     // Create a fresh subject for this specific navigation attempt
+    this.triggeredByGuard = true;
     this.navigateAnyway$ = new Subject<boolean>();
     this.showExitConfirm = true;
     
     // Return the observable that will emit when user makes a choice in the modal
-    return this.navigateAnyway$.asObservable();
+    return this.navigateAnyway$.pipe(
+      finalize(() => this.triggeredByGuard = false)
+    );
   }
+
 
 
 
@@ -403,11 +424,18 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   public confirmLeave(): void {
     this.showExitConfirm = false;
+    const wasGuarded = this.triggeredByGuard;
     this.isDirty = false; // Allow navigation now
     this.navigateAnyway$.next(true);
     this.navigateAnyway$.complete();
-    this.router.navigate(['/']);
+    
+    // If we were NOT already navigating (e.g. they clicked the toolbar button), 
+    // we need to trigger the navigation to home manually.
+    if (!wasGuarded) {
+      this.router.navigate(['/']);
+    }
   }
+
 
   public cancelLeave(): void {
     this.showExitConfirm = false;

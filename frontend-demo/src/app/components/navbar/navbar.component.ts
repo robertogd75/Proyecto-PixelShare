@@ -7,6 +7,8 @@ import { ToastService } from '../../services/toast.service';
 import { finalize, timeout } from 'rxjs';
 import { ThemeService } from '../../services/theme.service';
 import { DownloadService } from '../../services/download.service';
+import { DrawingStateService } from '../../services/drawing-state.service';
+
 
 
 
@@ -311,8 +313,10 @@ export class NavbarComponent {
     private toastService: ToastService,
     private cdr: ChangeDetectorRef,
     public themeService: ThemeService,
-    public downloadService: DownloadService
+    public downloadService: DownloadService,
+    private drawingService: DrawingStateService
   ) {}
+
 
 
 
@@ -334,17 +338,26 @@ export class NavbarComponent {
   }
 
   openJoinModal() {
+    if (this.drawingService.isDirty) {
+      this.toastService.info('Tienes un dibujo sin guardar. Descárgalo o usa el botón "Salir" de la pizarra antes de entrar en otra sala.', 6000);
+      return;
+    }
     this.modalMode = 'join';
     this.roomCode = '';
     this.showModal = true;
   }
 
   openCreateModal() {
+    if (this.drawingService.isDirty) {
+      this.toastService.info('Tienes un dibujo sin guardar. Descárgalo o usa el botón "Salir" de la pizarra antes de crear una nueva sala.', 6000);
+      return;
+    }
     this.modalMode = 'create';
     this.roomName = '';
     this.showModal = true;
     this.isCreating = false;
   }
+
 
   closeModal() {
     this.showModal = false;

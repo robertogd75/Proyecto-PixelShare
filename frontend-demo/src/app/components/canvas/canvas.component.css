@@ -58,6 +58,14 @@
   text-shadow: 0 2px 10px var(--bg-card);
 }
 
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  pointer-events: auto;
+}
+
+
 /* Room Info Badge */
 .room-info-badge {
   background: var(--bg-card);

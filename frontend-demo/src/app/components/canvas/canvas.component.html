@@ -2,6 +2,9 @@
   <div class="canvas-header">
     <div class="title-section">
       <h2>{{ canvasTitle }}</h2>
+      <button class="btn-theme-pill" (click)="toggleDarkMode()" [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'">
+        <span>{{ darkMode ? '☀️' : '🌙' }}</span>
+      </button>
     </div>
 
     <!-- Room Info Panel -->
@@ -28,9 +31,6 @@
         </button>
         <button class="btn-invite-pill link" (click)="copyInviteUrl()">
           <span>🔗 Enlace</span>
-        </button>
-        <button class="btn-theme-pill" (click)="toggleDarkMode()" [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'">
-          <span>{{ darkMode ? '☀️' : '🌙' }}</span>
         </button>
         <button class="btn-leave-pill" (click)="leaveRoom()">
           <span>🚪 Salir</span>

@@ -116,6 +116,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private navigateAnyway$ = new Subject<boolean>();
   private triggeredByGuard = false;
   private isRouterNavigating = false;
+  private exitAfterDownload = false;
+
 
 
 
@@ -473,9 +475,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
 
 
-  public openDownloadMenu(): void {
+  public openDownloadMenu(shouldExit: boolean = false): void {
+    this.exitAfterDownload = shouldExit;
     this.showDownloadMenu = true;
   }
+
 
   public downloadCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
@@ -506,10 +510,16 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     // Once downloaded, it's no longer "dirty" until they draw again
     this.isDirty = false;
     
-    this.drawingStateService.sendResponse(false); // Stay here
-    this.navigateAnyway$.next(false); // Stay after download if they were prompted
-    this.navigateAnyway$.complete();
+    if (this.exitAfterDownload) {
+      this.exitAfterDownload = false;
+      this.confirmLeave();
+    } else {
+      this.drawingStateService.sendResponse(false); // Stay here
+      this.navigateAnyway$.next(false); // Stay after download if they were prompted
+      this.navigateAnyway$.complete();
+    }
   }
+
 
 
 

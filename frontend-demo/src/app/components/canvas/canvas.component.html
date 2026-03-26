@@ -6,8 +6,8 @@
 
 
     <!-- Room Info Panel -->
-    <div class="room-info-badge" *ngIf="currentRoomCode">
-      <div class="info-group">
+    <div class="room-info-badge">
+      <div class="info-group" *ngIf="currentRoomCode">
         <div class="info-item">
           <span class="label">SALA</span>
           <div class="value-with-settings">
@@ -24,16 +24,15 @@
       </div>
 
       <div class="invite-actions">
-        <button class="btn-invite-pill code" (click)="copyInviteCode()">
+        <button class="btn-invite-pill code" *ngIf="currentRoomCode" (click)="copyInviteCode()">
           <span>📄 Código</span>
         </button>
-        <button class="btn-invite-pill link" (click)="copyInviteUrl()">
+        <button class="btn-invite-pill link" *ngIf="currentRoomCode" (click)="copyInviteUrl()">
           <span>🔗 Enlace</span>
         </button>
         <button class="btn-leave-pill" (click)='leaveRoom()'>
           <span>Salir</span>
         </button>
-
       </div>
 
       <!-- Host Settings Dropdown -->
@@ -61,6 +60,7 @@
       </div>
     </div>
   </div>
+
 
   <div class="canvas-viewport" #viewport>
     <div class="panning-container">
@@ -215,8 +215,9 @@
       <div class="modal-actions-box">
         <button class="btn-modal secondary" (click)="cancelLeave()">No salir</button>
         <button class="btn-modal danger" (click)="confirmLeave()">Salir y perder dibujo</button>
-        <button class="btn-modal primary" (click)="openDownloadMenu()">Descargar dibujo</button>
+        <button class="btn-modal primary" (click)="openDownloadMenu(true)">Descargar dibujo</button>
       </div>
+
     </div>
   </div>
 

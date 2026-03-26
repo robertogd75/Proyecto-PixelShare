@@ -46,8 +46,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   public canvasHeight = 2000;
   
   public selectedTool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' | 'fill' = 'brush';
-
+  private isFilling = false;
   private startPos: { x: number, y: number } | null = null;
+
   private lastPos: { x: number, y: number } | null = null;
 
   public get darkMode(): boolean {
@@ -883,70 +884,86 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): void {
+    if (this.isFilling) return;
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    // Convert CSS color to RGBA components using a temporary canvas to get precise numbers
-    const tempCtx = document.createElement('canvas').getContext('2d');
-    if (!tempCtx) return;
-    tempCtx.fillStyle = fillColor;
-    
-    // Read the pixel to get actual RGBA from browser
-    tempCtx.fillRect(0, 0, 1, 1);
-    const targetData = tempCtx.getImageData(0, 0, 1, 1).data;
-    const [r, g, b, a] = targetData;
-    
-    // Create a 32-bit integer for the target color (ABGR on little-endian)
-    const targetColor = (a << 24) | (b << 16) | (g << 8) | r;
+    this.isFilling = true;
+    try {
+      // Use a robust color parser to get the 32-bit integer
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 1;
+      tempCanvas.height = 1;
+      const tempCtx = tempCanvas.getContext('2d')!;
+      tempCtx.fillStyle = fillColor;
+      tempCtx.fillRect(0, 0, 1, 1);
+      const targetData = tempCtx.getImageData(0, 0, 1, 1).data;
+      const [r, g, b, a] = targetData;
+      const targetColor = (a << 24) | (b << 16) | (g << 8) | r;
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data32 = new Uint32Array(imageData.data.buffer);
-    
-    const startIdx = startY * canvas.width + startX;
-    const startColor = data32[startIdx];
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data32 = new Uint32Array(imageData.data.buffer);
+      const width = canvas.width;
+      const height = canvas.height;
+      const startIdx = startY * width + startX;
+      const startColor = data32[startIdx];
 
-    if (startColor === targetColor) return;
+      if (startColor === targetColor) return;
 
-    // Scanline Flood Fill implementation
-    const width = canvas.width;
-    const height = canvas.height;
-    const stack: number[] = [startX, startY];
+      // Hardened Scanline Algorithm
+      const stack: number[] = [startX, startY];
+      let safetyCounter = 0;
+      const maxIter = 1000000; // 1 million iterations max safety break
 
-    while (stack.length > 0) {
-      const y = stack.pop()!;
-      const x = stack.pop()!;
+      while (stack.length > 0 && safetyCounter < maxIter) {
+        safetyCounter++;
+        const y = stack.pop()!;
+        const x = stack.pop()!;
 
-      let left = x;
-      while (left > 0 && data32[y * width + (left - 1)] === startColor) {
-        left--;
-      }
-
-      let right = x;
-      while (right < width - 1 && data32[y * width + (right + 1)] === startColor) {
-        right++;
-      }
-
-      for (let i = left; i <= right; i++) {
-        data32[y * width + i] = targetColor;
-
-        if (y > 0 && data32[(y - 1) * width + i] === startColor) {
-          if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
-            stack.push(i, y - 1);
-          }
+        // Fill to the left
+        let left = x;
+        while (left > 0 && data32[y * width + (left - 1)] === startColor) {
+          left--;
         }
 
-        if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
-          if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
-            stack.push(i, y + 1);
+        // Fill to the right
+        let right = x;
+        while (right < width - 1 && data32[y * width + (right + 1)] === startColor) {
+          right++;
+        }
+
+        // Fill the current line span and check neighbors above and below
+        for (let i = left; i <= right; i++) {
+          data32[y * width + i] = targetColor;
+
+          // Check row above
+          if (y > 0 && data32[(y - 1) * width + i] === startColor) {
+            // Only push the start of a new span in the row above
+            if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
+              stack.push(i, y - 1);
+            }
+          }
+
+          // Check row below
+          if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
+            // Only push the start of a new span in the row below
+            if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
+              stack.push(i, y + 1);
+            }
           }
         }
       }
+
+      ctx.putImageData(imageData, 0, 0);
+      this.isDirty = true;
+    } catch (e) {
+      console.error('Flood fill failed', e);
+    } finally {
+      this.isFilling = false;
     }
-
-    ctx.putImageData(imageData, 0, 0);
-    this.isDirty = true;
   }
+
 
 
   private getEventPos(event: any): { x: number, y: number } {

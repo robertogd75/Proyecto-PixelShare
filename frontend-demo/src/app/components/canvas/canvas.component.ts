@@ -678,6 +678,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       }, true);
     } else if (this.selectedTool === 'fill') {
+      if (this.isFilling) return; // Titanium 2.0 Bounce-Guard: Prevent redundant fills
       this.floodFill(pos.x, pos.y, this.currentColor);
       const fillPixel: Pixel = {
         x: pos.x, y: pos.y, color: this.currentColor,
@@ -685,7 +686,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       };
       this.pixelService.sendPixel(fillPixel);
-      this.isDrawing = false; // Fill is a single action, not a continuous draw
+      this.isDrawing = false; // Fill is a single action
     }
   }
 
@@ -930,7 +931,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): Promise<void> {
     return new Promise(async (resolve) => {
-      if (this.isFilling) {
+      // isFilling prevents overlapping fills and redundant messages
+      if (this.isFilling && !isRemote) {
         resolve();
         return;
       }
@@ -975,15 +977,19 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
         const stack: number[] = [startX, startY];
         let lastYieldTime = performance.now();
-        let safety = 0;
+        let iterations = 0;
         const maxIter = 10000000;
 
-        while (stack.length > 0 && safety < maxIter) {
-          safety++;
+        while (stack.length > 0 && iterations < maxIter) {
+          iterations++;
           
-          if (performance.now() - lastYieldTime > 50) {
-            await new Promise(r => setTimeout(r, 0));
-            lastYieldTime = performance.now();
+          // Yield only when we've been working long enough (Titanium 2.0: 50ms budget)
+          // We only check time every 1000 iterations to reduce performance.now() overhead
+          if (iterations % 1000 === 0) {
+            if (performance.now() - lastYieldTime > 50) {
+              await new Promise(r => setTimeout(r, 0));
+              lastYieldTime = performance.now();
+            }
           }
 
           const y = stack.pop()!;
@@ -1002,23 +1008,31 @@ export class CanvasComponent implements OnInit, AfterViewInit {
             data32[y * width + i] = targetColor;
           }
 
-          const scan = (yLine: number) => {
-            if (yLine < 0 || yLine >= height) return;
+          // Optimized Scanning (GC-Free: no inner functions)
+          if (y > 0) {
             let spanAdded = false;
+            const yAbove = y - 1;
             for (let i = left; i <= right; i++) {
-              if (data32[yLine * width + i] === startColor) {
+              if (data32[yAbove * width + i] === startColor) {
                 if (!spanAdded) {
-                  stack.push(i, yLine);
+                  stack.push(i, yAbove);
                   spanAdded = true;
                 }
-              } else {
-                spanAdded = false;
-              }
+              } else spanAdded = false;
             }
-          };
-
-          scan(y - 1);
-          scan(y + 1);
+          }
+          if (y < height - 1) {
+            let spanAdded = false;
+            const yBelow = y + 1;
+            for (let i = left; i <= right; i++) {
+              if (data32[yBelow * width + i] === startColor) {
+                if (!spanAdded) {
+                  stack.push(i, yBelow);
+                  spanAdded = true;
+                }
+              } else spanAdded = false;
+            }
+          }
         }
 
         const dirtyW = maxX - minX + 1;

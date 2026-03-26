@@ -240,8 +240,9 @@
   gap: 12px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #444;
+  color: var(--text-primary);
 }
+
 
 @keyframes slideDown {
   from {
@@ -374,7 +375,7 @@ canvas {
   height: 48px;
   border-radius: 50%;
   border: none;
-  background: #ff6348;
+  background: var(--danger-red);
   color: #fff;
   font-size: 1.2rem;
   cursor: pointer;
@@ -382,14 +383,17 @@ canvas {
   align-items: center;
   justify-content: center;
   z-index: 1001;
-  box-shadow: 0 4px 18px rgba(255, 99, 72, 0.5);
+  box-shadow: 0 4px 12px var(--shadow-color);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
+
 .btn-floating-toggle:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 24px rgba(255, 99, 72, 0.65);
+  box-shadow: 0 6px 16px var(--shadow-color);
+  background: #ff6b81; /* Lighter red on hover like btn-leave-pill */
 }
+
 
 .btn-close-toolbar {
   background: none;

@@ -27,8 +27,9 @@ import { Subscription } from 'rxjs';
     .toast-container {
       position: fixed;
       top: 20px;
-      right: 20px;
+      left: 20px;
       z-index: 9999;
+
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -53,9 +54,10 @@ import { Subscription } from 'rxjs';
 
 
     @keyframes toastSlide {
-      from { transform: translateX(50px); opacity: 0; }
+      from { transform: translateX(-50px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
+
 
     .toast-icon {
       width: 28px;

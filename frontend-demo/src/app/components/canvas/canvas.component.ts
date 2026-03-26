@@ -891,15 +891,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     const tempCtx = document.createElement('canvas').getContext('2d');
     if (!tempCtx) return;
     tempCtx.fillStyle = fillColor;
-    const resolvedColor = tempCtx.fillStyle; // Browser resolved color (e.g. #000000)
     
     // Read the pixel to get actual RGBA from browser
     tempCtx.fillRect(0, 0, 1, 1);
     const targetData = tempCtx.getImageData(0, 0, 1, 1).data;
     const [r, g, b, a] = targetData;
     
-    // Create a 32-bit integer for the target color
-    // This is ABGR on little-endian systems (typical for browsers)
+    // Create a 32-bit integer for the target color (ABGR on little-endian)
     const targetColor = (a << 24) | (b << 16) | (g << 8) | r;
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -908,33 +906,48 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     const startIdx = startY * canvas.width + startX;
     const startColor = data32[startIdx];
 
-    // If already the same color, no work needed
     if (startColor === targetColor) return;
 
-    const stack: [number, number][] = [[startX, startY]];
+    // Scanline Flood Fill implementation
     const width = canvas.width;
     const height = canvas.height;
+    const stack: number[] = [startX, startY];
 
     while (stack.length > 0) {
-      const point = stack.pop();
-      if (!point) continue;
-      const [x, y] = point;
+      const y = stack.pop()!;
+      const x = stack.pop()!;
 
-      const idx = y * width + x;
-      if (data32[idx] === startColor) {
-        data32[idx] = targetColor;
+      let left = x;
+      while (left > 0 && data32[y * width + (left - 1)] === startColor) {
+        left--;
+      }
 
-        // Push neighbors (using simple 4-way fill for robustness)
-        if (x > 0) stack.push([x - 1, y]);
-        if (x < width - 1) stack.push([x + 1, y]);
-        if (y > 0) stack.push([x, y - 1]);
-        if (y < height - 1) stack.push([x, y + 1]);
+      let right = x;
+      while (right < width - 1 && data32[y * width + (right + 1)] === startColor) {
+        right++;
+      }
+
+      for (let i = left; i <= right; i++) {
+        data32[y * width + i] = targetColor;
+
+        if (y > 0 && data32[(y - 1) * width + i] === startColor) {
+          if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
+            stack.push(i, y - 1);
+          }
+        }
+
+        if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
+          if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
+            stack.push(i, y + 1);
+          }
+        }
       }
     }
 
     ctx.putImageData(imageData, 0, 0);
     this.isDirty = true;
   }
+
 
   private getEventPos(event: any): { x: number, y: number } {
 

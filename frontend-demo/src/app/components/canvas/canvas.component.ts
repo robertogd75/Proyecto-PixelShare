@@ -656,7 +656,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public startDrawing(event: any): void {
-    if (this.isFilling) return;
     if (!this.canUserDraw) {
       this.toastService.info('El anfitrión ha restringido el dibujo a esta sala.');
       return;
@@ -753,7 +752,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   }
 
   public draw(event: any): void {
-    if (this.isFilling || !this.isDrawing || !this.canUserDraw) return;
+    if (!this.isDrawing || !this.canUserDraw) return;
     if (event.type === 'touchmove') event.preventDefault();
 
     const pos = this.getEventPos(event);
@@ -931,6 +930,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): Promise<void> {
     return new Promise(async (resolve) => {
+      // isFilling still prevents overlapping fills, but no longer blocks the brush
       if (this.isFilling) {
         resolve();
         return;
@@ -941,7 +941,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       if (!ctx) { resolve(); return; }
 
       this.isFilling = true;
-      canvas.style.cursor = 'wait';
       
       try {
         let targetColor: number;
@@ -968,10 +967,13 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
         if (startColor === targetColor) {
           this.isFilling = false;
-          canvas.style.cursor = '';
           resolve();
           return;
         }
+
+        // Bounding Box tracking
+        let minX = startX, maxX = startX;
+        let minY = startY, maxY = startY;
 
         const stack: number[] = [startX, startY];
         let spansProcessed = 0;
@@ -979,7 +981,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
         while (stack.length > 0 && spansProcessed < maxIter) {
           spansProcessed++;
-          if (spansProcessed % 1000 === 0) {
+          if (spansProcessed % 2000 === 0) {
             await new Promise(r => setTimeout(r, 0));
           }
 
@@ -990,6 +992,11 @@ export class CanvasComponent implements OnInit, AfterViewInit {
           while (left > 0 && data32[y * width + (left - 1)] === startColor) left--;
           let right = x;
           while (right < width - 1 && data32[y * width + (right + 1)] === startColor) right++;
+
+          if (left < minX) minX = left;
+          if (right > maxX) maxX = right;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
 
           for (let i = left; i <= right; i++) {
             data32[y * width + i] = targetColor;
@@ -1006,17 +1013,20 @@ export class CanvasComponent implements OnInit, AfterViewInit {
           }
         }
 
-        ctx.putImageData(imageData, 0, 0);
+        // Surgically update only the area that was modified
+        const dirtyW = maxX - minX + 1;
+        const dirtyH = maxY - minY + 1;
+        ctx.putImageData(imageData, 0, 0, minX, minY, dirtyW, dirtyH);
         this.isDirty = true;
       } catch (err) {
         console.error('Flood fill failed', err);
       } finally {
         this.isFilling = false;
-        canvas.style.cursor = '';
         resolve();
       }
     });
   }
+
 
 
 

@@ -930,7 +930,6 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): Promise<void> {
     return new Promise(async (resolve) => {
-      // isFilling still prevents overlapping fills, but no longer blocks the brush
       if (this.isFilling) {
         resolve();
         return;
@@ -971,26 +970,27 @@ export class CanvasComponent implements OnInit, AfterViewInit {
           return;
         }
 
-        // Bounding Box tracking
         let minX = startX, maxX = startX;
         let minY = startY, maxY = startY;
 
         const stack: number[] = [startX, startY];
-        let spansProcessed = 0;
+        let lastYieldTime = performance.now();
+        let safety = 0;
         const maxIter = 10000000;
 
-        while (stack.length > 0 && spansProcessed < maxIter) {
-          spansProcessed++;
-          if (spansProcessed % 2000 === 0) {
+        while (stack.length > 0 && safety < maxIter) {
+          safety++;
+          
+          if (performance.now() - lastYieldTime > 50) {
             await new Promise(r => setTimeout(r, 0));
+            lastYieldTime = performance.now();
           }
 
           const y = stack.pop()!;
           const x = stack.pop()!;
 
-          let left = x;
+          let left = x, right = x;
           while (left > 0 && data32[y * width + (left - 1)] === startColor) left--;
-          let right = x;
           while (right < width - 1 && data32[y * width + (right + 1)] === startColor) right++;
 
           if (left < minX) minX = left;
@@ -1000,20 +1000,27 @@ export class CanvasComponent implements OnInit, AfterViewInit {
 
           for (let i = left; i <= right; i++) {
             data32[y * width + i] = targetColor;
-            if (y > 0 && data32[(y - 1) * width + i] === startColor) {
-              if (i === left || data32[(y - 1) * width + (i - 1)] !== startColor) {
-                stack.push(i, y - 1);
-              }
-            }
-            if (y < height - 1 && data32[(y + 1) * width + i] === startColor) {
-              if (i === left || data32[(y + 1) * width + (i - 1)] !== startColor) {
-                stack.push(i, y + 1);
-              }
-            }
           }
+
+          const scan = (yLine: number) => {
+            if (yLine < 0 || yLine >= height) return;
+            let spanAdded = false;
+            for (let i = left; i <= right; i++) {
+              if (data32[yLine * width + i] === startColor) {
+                if (!spanAdded) {
+                  stack.push(i, yLine);
+                  spanAdded = true;
+                }
+              } else {
+                spanAdded = false;
+              }
+            }
+          };
+
+          scan(y - 1);
+          scan(y + 1);
         }
 
-        // Surgically update only the area that was modified
         const dirtyW = maxX - minX + 1;
         const dirtyH = maxY - minY + 1;
         ctx.putImageData(imageData, 0, 0, minX, minY, dirtyW, dirtyH);
@@ -1026,6 +1033,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       }
     });
   }
+
 
 
 

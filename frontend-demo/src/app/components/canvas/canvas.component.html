@@ -4,7 +4,6 @@
       <h2>{{ canvasTitle }}</h2>
     </div>
 
-
     <!-- Room Info Panel -->
     <div class="room-info-badge" *ngIf="currentRoomCode">
       <div class="info-group">
@@ -30,178 +29,92 @@
         <button class="btn-invite-pill link" (click)="copyInviteUrl()">
           <span>🔗 Enlace</span>
         </button>
-        <button class="btn-leave-pill" (click)='leaveRoom()'>
-          <span>Salir</span>
-        </button>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-action leave" (click)="leaveRoom()" title="Salir de la sala">
+        <span class="icon">🚪</span>
+        <span class="text">Salir</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="canvas-workspace">
+    <!-- Toolbar -->
+    <div class="floating-toolbar" [class.hidden]="!toolbarVisible">
+      <div class="tool-section tools">
+        <button [class.active]="selectedTool === 'brush'" (click)="selectTool('brush')" title="Pincel">🖌️</button>
+        <button [class.active]="selectedTool === 'eraser'" (click)="selectTool('eraser')" title="Borrador">🧽</button>
+        <button [class.active]="selectedTool === 'fill'" (click)="selectTool('fill')" title="Bote de pintura">🪣</button>
+        <div class="tool-separator"></div>
+        <button [class.active]="selectedTool === 'line'" (click)="selectTool('line')" title="Línea">📏</button>
+        <button [class.active]="selectedTool === 'rect'" (click)="selectTool('rect')" title="Rectángulo">⬛</button>
+        <button [class.active]="selectedTool === 'circle'" (click)="selectTool('circle')" title="Círculo">⭕</button>
       </div>
 
-      <!-- Host Settings Dropdown -->
-      <div class="settings-dropdown" *ngIf="showSettingsMenu && isRoomHost">
-        <div class="settings-header">
-          <span>Ajustes de Sala</span>
-          <button class="btn-close-settings" (click)="toggleSettingsMenu()">✕</button>
+      <div class="tool-section colors">
+        <input type="color" [(ngModel)]="currentColor" class="color-picker" title="Color de dibujo">
+        <div class="brush-size-control">
+          <label>{{ brushSize }}px</label>
+          <input type="range" min="1" max="50" [(ngModel)]="brushSize" class="size-slider">
         </div>
-        <div class="settings-body">
-          <div class="setting-item">
-            <label class="switch">
-              <input type="checkbox" [(ngModel)]="allowAllDraw" (change)="updateRoomSettings()">
-              <span class="slider"></span>
-            </label>
-            <span>Permitir que todos pinten</span>
-          </div>
-          <div class="setting-item">
-            <label class="switch">
-              <input type="checkbox" [(ngModel)]="allowAllClear" (change)="updateRoomSettings()">
-              <span class="slider"></span>
-            </label>
-            <span>Permitir que todos limpien</span>
-          </div>
+      </div>
+
+      <div class="tool-section actions">
+        <button (click)="clearCanvas()" class="btn-clear" [disabled]="!canUserClear" title="Limpiar pizarra">🗑️</button>
+        <button (click)="openDownloadMenu()" class="btn-download" title="Descargar dibujo">💾</button>
+      </div>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas-viewport" #viewport [style.cursor]="'crosshair'">
+      <div class="canvas-wrapper" [style.transform]="'scale(' + zoomLevel + ')'">
+        <canvas #canvasElement (mousedown)="startDrawing($event)"></canvas>
+        <canvas #tempCanvas class="temp-canvas"></canvas>
+        
+        <!-- Custom Cursor Preview -->
+        <div class="custom-cursor" *ngIf="cursorVisible" 
+             [style.left.px]="cursorX" [style.top.px]="cursorY"
+             [style.width.px]="cursorSize" [style.height.px]="cursorSize"
+             [style.borderColor]="cursorBorderColor">
         </div>
       </div>
     </div>
   </div>
 
-
-  <div class="canvas-viewport" #viewport>
-    <div class="panning-container">
-      <!-- canvas-scaler takes exactly the visual (post-zoom) space, eliminating dead margins -->
-      <div class="canvas-scaler"
-           [style.width.px]="canvasWidth * zoomLevel"
-           [style.height.px]="canvasHeight * zoomLevel">
-        <div class="canvas-wrapper" 
-             [class.is-restricted]="isDrawRestricted"
-             [style.cursor]="canvasCursor"
-             (mousedown)="startDrawing($event)"
-             (mouseup)="stopDrawing()"
-             (touchstart)="startDrawing($event)"
-             (touchmove)="draw($event)"
-             (touchend)="stopDrawing()">
-
-          <!-- Custom visible brush cursor -->
-          <div class="brush-cursor"
-               *ngIf="cursorVisible"
-               [style.left.px]="cursorX"
-               [style.top.px]="cursorY"
-               [style.width.px]="cursorSize"
-               [style.height.px]="cursorSize"
-               [style.border-color]="cursorBorderColor"
-               [style.margin-left.px]="-cursorSize / 2"
-               [style.margin-top.px]="-cursorSize / 2">
-          </div>
-          <canvas #canvasElement
-                  [style.width.px]="canvasWidth * zoomLevel"
-                  [style.height.px]="canvasHeight * zoomLevel"
-                  style="pointer-events: none; display: block;">
-          </canvas>
-          <canvas #tempCanvas 
-                  [style.width.px]="canvasWidth * zoomLevel"
-                  [style.height.px]="canvasHeight * zoomLevel"
-                  class="temp-canvas" 
-                  style="pointer-events: none; display: block;">
-          </canvas>
-          <div class="restricted-overlay" *ngIf="isDrawRestricted">
-            <span>🔒 Pizarra restringida por el anfitrión</span>
-          </div>
-          <div class="grid-overlay" [class.active]="showGrid"
-               [style.background-image]="gridBackgroundImage"
-               [style.width.px]="canvasWidth * zoomLevel"
-               [style.height.px]="canvasHeight * zoomLevel"></div>
-        </div>
-      </div>
+  <!-- Sidebar Opcional -->
+  <div class="settings-sidebar" [class.open]="showSettingsMenu">
+    <div class="sidebar-header">
+      <h3>Ajustes de Sala</h3>
+      <button class="btn-close" (click)="toggleSettingsMenu()">✕</button>
     </div>
-  </div>
-
-  <!-- Floating toolbar toggle button -->
-  <button class="btn-floating-toggle" *ngIf="!toolbarVisible"
-          (click)="toolbarVisible = true" title="Mostrar herramientas">
-    🛠️
-  </button>
-
-
-  <div class="toolbar" [class.toolbar-hidden]="!toolbarVisible">
-    <button class="btn-close-toolbar" (click)="toolbarVisible = false" title="Ocultar herramientas">✕</button>
     
-    <!-- Tool Dropdown -->
-    <div class="tool-group tool-dropdown-container">
-      <span class="tool-label">Herramienta</span>
-      <div class="active-tool-display" (click)="toggleToolMenu()">
-        <span [ngSwitch]="selectedTool">
-          <span *ngSwitchCase="'brush'">🖌️ Pincel</span>
-          <span *ngSwitchCase="'eraser'">🧽 Borrador</span>
-          <span *ngSwitchCase="'fill'">🪣 Rellenar</span>
-          <span *ngSwitchCase="'line'">📏 Línea</span>
-          <span *ngSwitchCase="'rect'">⬜ Rectángulo</span>
-          <span *ngSwitchCase="'circle'">⭕ Círculo</span>
-        </span>
-
-        <span class="arrow">▾</span>
+    <div class="sidebar-content">
+      <div class="setting-group" *ngIf="isRoomHost">
+        <h4>Permisos</h4>
+        <div class="setting-item">
+          <label>Otros pueden pintar</label>
+          <input type="checkbox" [(ngModel)]="allowAllDraw" (change)="updateRoomSettings()">
+        </div>
+        <div class="setting-item">
+          <label>Otros pueden borrar</label>
+          <input type="checkbox" [(ngModel)]="allowAllClear" (change)="updateRoomSettings()">
+        </div>
       </div>
-      <div class="tool-menu" *ngIf="showToolMenu">
-        <button class="tool-item" [class.active]="selectedTool === 'brush'" (click)="selectTool('brush')">
-          <span class="tool-icon">🖌️</span> Pincel
-        </button>
-        <button class="tool-item" [class.active]="selectedTool === 'eraser'" (click)="selectTool('eraser')">
-          <span class="tool-icon">🧽</span> Borrador
-        </button>
-        <button class="tool-item" [class.active]="selectedTool === 'fill'" (click)="selectTool('fill')">
-          <span class="tool-icon">🪣</span> Rellenar
-        </button>
-        <button class="tool-item" [class.active]="selectedTool === 'line'" (click)="selectTool('line')">
-          <span class="tool-icon">📏</span> Línea
-        </button>
-        <button class="tool-item" [class.active]="selectedTool === 'rect'" (click)="selectTool('rect')">
-          <span class="tool-icon">⬜</span> Rectángulo
-        </button>
-        <button class="tool-item" [class.active]="selectedTool === 'circle'" (click)="selectTool('circle')">
-          <span class="tool-icon">⭕</span> Círculo
-        </button>
+      <div class="setting-group">
+        <h4>Lienzo</h4>
+        <div class="size-presets">
+          <button (click)="changeCanvasSize('small')">Pequeño</button>
+          <button (click)="changeCanvasSize('normal')">Normal</button>
+          <button (click)="changeCanvasSize('large')">Grande</button>
+          <button (click)="changeCanvasSize('huge')">Gigante</button>
+        </div>
       </div>
-
     </div>
-
-    <div class="tool-group">
-      <span class="tool-label">Color</span>
-      <input type="color" [(ngModel)]="currentColor">
-    </div>
-
-    <div class="tool-group">
-      <span class="tool-label">Tamaño pincel</span>
-      <input type="range" min="1" max="50" [(ngModel)]="brushSize">
-      <span class="tool-value">{{ brushSize }}px</span>
-    </div>
-
-    <div class="tool-group zoom-group">
-      <span class="tool-label">Zoom</span>
-      <input type="range" [min]="minZoom" max="2" step="0.05" [(ngModel)]="zoomLevel">
-      <span class="tool-value">{{ (zoomLevel * 100).toFixed(0) }}%</span>
-    </div>
-
-    <div class="tool-group size-group" *ngIf="!currentRoomId || isRoomHost">
-      <span class="tool-label">Tamaño pizarra</span>
-      <select (change)="changeCanvasSize($any($event.target).value)" class="nav-select">
-        <option value="small">Pequeño</option>
-        <option value="normal" selected>Normal</option>
-        <option value="large">Grande</option>
-        <option value="huge">Enorme</option>
-      </select>
-    </div>
-
-    <div class="tool-group grid-toggle">
-      <span class="tool-label">Cuadrícula</span>
-      <label class="switch">
-        <input type="checkbox" [(ngModel)]="showGrid">
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <div class="tool-group actions-group">
-      <span class="tool-label">Acciones</span>
-      <button class="btn-clear" (click)="clearCanvas()">Limpiar Pizarra</button>
-    </div>
-
   </div>
 
-  <!-- Clear Confirmation Overlay -->
+  <!-- Overlay de confirmación -->
   <div class="confirm-overlay" *ngIf="showClearConfirm">
     <div class="confirm-card">
       <div class="confirm-icon">🗑️</div>
@@ -214,63 +127,50 @@
     </div>
   </div>
 
-  <!-- Exit Confirmation Modal -->
+  <!-- Exit Confirmation Modal Middle -->
   <div class="modal-overlay" *ngIf="showExitConfirm" (click)="cancelLeave()">
     <div class="modal-card" (click)="$event.stopPropagation()">
-      <div class="modal-header-simple">
-        <span class="modal-icon">⚠️</span>
-        <h3>¿Quieres salir de la pizarra?</h3>
+      <div class="modal-header">
+        <div class="modal-icon">🚪</div>
+        <h3>¿Quieres abandonar la sala?</h3>
+        <p>Asegúrate de haber guardado tu trabajo antes de salir.</p>
       </div>
-      <p class="modal-text">Si sales ahora, perderás el dibujo actual a menos que lo descargues.</p>
-      
-      <div class="modal-actions-box">
-        <button class="btn-modal secondary" (click)="cancelLeave()">No salir</button>
-        <button class="btn-modal danger" (click)="confirmLeave()">Salir y perder dibujo</button>
-        <button class="btn-modal primary" (click)="openDownloadMenu(true)">Descargar dibujo</button>
+      <div class="modal-actions">
+        <button class="btn-modal primary" (click)="confirmLeave()">Salir directamente</button>
+        <button class="btn-modal secondary" (click)="openDownloadMenu(true)">Guardar y Salir</button>
+        <button class="btn-modal ghost" (click)="cancelLeave()">Seguir editando</button>
       </div>
-
     </div>
   </div>
 
-  <!-- Download Tool Modal -->
+  <!-- Download Modal -->
   <div class="modal-overlay" *ngIf="showDownloadMenu" (click)="cancelLeave()">
     <div class="modal-card" (click)="$event.stopPropagation()">
-      <div class="modal-header-simple">
-        <span class="modal-icon">📥</span>
+      <div class="modal-header">
+        <div class="modal-icon">💾</div>
         <h3>Guardar Dibujo</h3>
+        <p>Exporta tu creación antes de salir</p>
       </div>
-      
-      <div class="download-form">
-        <div class="form-group-download">
-          <label>Nombre del archivo</label>
-          <input type="text" [(ngModel)]="downloadFilename" placeholder="mi-pizarra">
-        </div>
-        
-        <div class="form-group-download">
-          <label>Formato de imagen</label>
-          <div class="format-toggle">
-            <button [class.active]="downloadFormat === 'png'" (click)="downloadFormat = 'png'">PNG</button>
-            <button [class.active]="downloadFormat === 'jpg'" (click)="downloadFormat = 'jpg'">JPG</button>
-          </div>
-        </div>
+      <div class="modal-body">
+         <input type="text" [(ngModel)]="downloadFilename" placeholder="mi-dibujo">
+         <select [(ngModel)]="downloadFormat">
+           <option value="png">PNG</option>
+           <option value="jpg">JPG</option>
+         </select>
       </div>
-
       <div class="modal-actions-box">
-        <button class="btn-modal secondary" (click)="cancelLeave()">Cancelar</button>
+        <button class="btn-modal secondary" (click)="showDownloadMenu = false">Cancelar</button>
         <button class="btn-modal primary" (click)="downloadCanvas()">Descargar Ahora</button>
       </div>
     </div>
   </div>
+
   <!-- Host Closed Overlay -->
   <div class="host-closed-overlay" *ngIf="isHostClosed">
     <div class="host-closed-card">
       <div class="icon-closed">⚠️</div>
       <h1>Sala Cerrada</h1>
       <p>El anfitrión ha finalizado la sesión. Serás redirigido a la página principal en unos segundos.</p>
-      <div class="loader-bar">
-        <div class="progress"></div>
-      </div>
     </div>
   </div>
 </div>
-

@@ -45,7 +45,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private canvasBuffer: Uint32Array | null = null;
   public canvasWidth = 2828;
   public canvasHeight = 2000;
-  
+
   public selectedTool: 'brush' | 'eraser' | 'line' | 'rect' | 'circle' | 'fill' = 'brush';
   private isFilling = false;
   private startPos: { x: number, y: number } | null = null;
@@ -91,7 +91,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     private downloadService: DownloadService,
     private drawingStateService: DrawingStateService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
 
 
@@ -101,7 +101,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   public allowAllClear = true;
   public showSettingsMenu = false;
   public showToolMenu = false;
-  
+
   // Exit & Download States
   public showExitConfirm = false;
   public showDownloadMenu = false;
@@ -115,7 +115,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   set isDirty(val: boolean) {
     this._isDirty = val;
     this.drawingStateService.setDirty(val);
-    
+
     // Create a history trap when the board becomes dirty
     // This allows us to intercept the browser "Back" button even when leaving the site
     if (val && !this.hasHistoryTrap) {
@@ -139,7 +139,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   // Throttling for collaborative performance
   private lastSendTime = 0;
   private lastSentPos: { x: number, y: number } | null = null;
-  
+
   // Performance Architecture (v2): Frame-Aligned Rendering & Pulsed Emission
   private incomingBuffer: Pixel[] = [];
   private outgoingBuffer: Pixel[] = [];
@@ -173,7 +173,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       } else if (!isDark && this.currentColor === '#ffffff') {
         this.currentColor = '#000000';
       }
-      
+
       // We must wait for the next tick for CSS variables to update and for the canvas to be ready
       setTimeout(() => {
         if (this.ctx) {
@@ -232,13 +232,13 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public canDeactivate(): Observable<boolean> | boolean {
     if (!this.isDirty) return true;
-    
+
     // Create a fresh subject for this specific navigation attempt
     this.triggeredByGuard = true;
     this.isRouterNavigating = true; // Block the native beforeunload dialog for this router event
     this.navigateAnyway$ = new Subject<boolean>();
     this.showExitConfirm = true;
-    
+
     // Return the observable that will emit when user makes a choice in the modal
     return this.navigateAnyway$.pipe(
       finalize(() => {
@@ -274,10 +274,10 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private initCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
     this.ctx = canvas.getContext('2d', { alpha: false })!;
-    
+
     const tCanvas = this.tempCanvasRef.nativeElement;
     this.tempCtx = tCanvas.getContext('2d')!;
-    
+
     this.resizeCanvas();
     this.initBuffer();
     this.ctx.fillStyle = this.themeBgColor;
@@ -408,11 +408,11 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    switch(size) {
-      case 'small':  this.canvasWidth = 1414; this.canvasHeight = 1000; break;
+    switch (size) {
+      case 'small': this.canvasWidth = 1414; this.canvasHeight = 1000; break;
       case 'normal': this.canvasWidth = 2828; this.canvasHeight = 2000; break;
-      case 'large':  this.canvasWidth = 4243; this.canvasHeight = 3000; break;
-      case 'huge':   this.canvasWidth = 5657; this.canvasHeight = 4000; break;
+      case 'large': this.canvasWidth = 4243; this.canvasHeight = 3000; break;
+      case 'huge': this.canvasWidth = 5657; this.canvasHeight = 4000; break;
     }
 
     this.resizeCanvas();
@@ -460,7 +460,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const process = async () => {
       const startTime = performance.now();
-      
+
       // God-Mode: Use the persistent canvasBuffer directly
       if (!this.canvasBuffer) { this.initBuffer(); }
       let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
@@ -468,7 +468,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
       while (index < pixels.length && performance.now() - startTime < 32) {
         const p = pixels[index++];
-        
+
         if (p.type === 'FILL') {
           const result = await this.executeFloodFillOnBuffer(this.canvasBuffer!, p.x, p.y, p.color, canvas.width, canvas.height, false);
           if (result) {
@@ -495,11 +495,11 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       if (batchModified) {
         const dirtyW = maxX - minX + 1;
         const dirtyH = maxY - minY + 1;
-        
+
         // Fix: Cast buffer to any then ArrayBuffer to satisfy TS environment
         const imageData = new ImageData(
-          new Uint8ClampedArray(this.canvasBuffer!.buffer as any as ArrayBuffer), 
-          canvas.width, 
+          new Uint8ClampedArray(this.canvasBuffer!.buffer as any as ArrayBuffer),
+          canvas.width,
           canvas.height
         );
         ctx.putImageData(imageData, 0, 0, minX, minY, dirtyW, dirtyH);
@@ -541,16 +541,26 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private isLastFillOurs(pixel: Pixel): boolean {
     if (!this.lastFillEvent) return false;
-    return pixel.x === this.lastFillEvent.x && 
-           pixel.y === this.lastFillEvent.y && 
-           pixel.color === this.lastFillEvent.color;
+    return pixel.x === this.lastFillEvent.x &&
+      pixel.y === this.lastFillEvent.y &&
+      pixel.color === this.lastFillEvent.color;
   }
 
 
 
 
   private setupWebSocket(roomId?: number): void {
-    this.pixelService.connect(roomId).subscribe(pixel => {
+    this.pixelService.connect(roomId).subscribe(data => {
+      // Handle both single pixel objects and batched pixel arrays (Overdrive Architecture)
+      if (Array.isArray(data)) {
+        data.forEach(p => this.handleIncomingPixel(p, roomId));
+      } else {
+        this.handleIncomingPixel(data, roomId);
+      }
+    });
+  }
+
+  private handleIncomingPixel(pixel: Pixel, roomId?: number): void {
     // Process special types
     if (pixel.type === 'INIT_PIXELS' && pixel.pixelHistory) {
       console.log(`Syncing ${pixel.pixelHistory.length} pixels from history...`);
@@ -577,23 +587,22 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     if (pixel.type === 'SETTINGS_UPDATE') {
-        this.allowAllDraw = !!pixel.allowAllDraw;
-        this.allowAllClear = !!pixel.allowAllClear;
-        if (!this.isRoomHost) {
-            this.toastService.info('Ajustes de sala actualizados por el anfitrión.');
-        }
-      } else if (pixel.type === 'RESIZE' && pixel.width && pixel.height) {
-        this.canvasWidth = pixel.width;
-        this.canvasHeight = pixel.height;
-        this.resizeCanvas();
-        this.fitZoom();
-      } else if (pixel.type === 'CLEAR') {
-        const canvas = this.canvasRef.nativeElement;
-        this.ctx.fillStyle = this.themeBgColor;
-        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (this.canvasBuffer) this.canvasBuffer.fill(this.colorToUint32(this.themeBgColor));
+      this.allowAllDraw = !!pixel.allowAllDraw;
+      this.allowAllClear = !!pixel.allowAllClear;
+      if (!this.isRoomHost) {
+        this.toastService.info('Ajustes de sala actualizados por el anfitrión.');
       }
-    });
+    } else if (pixel.type === 'RESIZE' && pixel.width && pixel.height) {
+      this.canvasWidth = pixel.width;
+      this.canvasHeight = pixel.height;
+      this.resizeCanvas();
+      this.fitZoom();
+    } else if (pixel.type === 'CLEAR') {
+      const canvas = this.canvasRef.nativeElement;
+      this.ctx.fillStyle = this.themeBgColor;
+      this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (this.canvasBuffer) this.canvasBuffer.fill(this.colorToUint32(this.themeBgColor));
+    }
   }
 
   @HostListener('wheel', ['$event'])
@@ -658,13 +667,13 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showExitConfirm = false;
     const wasGuarded = this.triggeredByGuard;
     this.isDirty = false; // Allow navigation now
-    
+
     // Notify any remote requester (like Navbar) that we are good to go
     this.drawingStateService.sendResponse(true);
-    
+
     this.navigateAnyway$.next(true);
     this.navigateAnyway$.complete();
-    
+
     // If we are host and explicitly leaving, terminate the room for everyone
     if (this.isRoomHost && this.currentRoomId !== undefined) {
       this.pixelService.sendPixel({
@@ -702,7 +711,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public downloadCanvas(): void {
     const canvas = this.canvasRef.nativeElement;
-    
+
     // Create a temporary canvas for the export (to ensure background is included)
     const exportCanvas = document.createElement('canvas');
     exportCanvas.width = canvas.width;
@@ -725,10 +734,10 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.toastService.success('Dibujo descargado correctamente');
     this.showDownloadMenu = false;
-    
+
     // Once downloaded, it's no longer "dirty" until they draw again
     this.isDirty = false;
-    
+
     if (this.exitAfterDownload) {
       this.exitAfterDownload = false;
       this.confirmLeave();
@@ -774,7 +783,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public updateRoomSettings(): void {
     if (!this.isRoomHost || this.currentRoomId === undefined) return;
-    
+
     const settingsMsg: Pixel = {
       x: 0, y: 0, color: '',
       type: 'SETTINGS_UPDATE',
@@ -816,10 +825,10 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       this.lastLocalFillX = pos.x;
       this.lastLocalFillY = pos.y;
       this.lastLocalFillColor = this.currentColor;
-      
+
       // Lazy Sync: Only sync the buffer RIGHT BEFORE we need to fill
       this.syncPendingBuffer();
-      
+
       this.floodFill(pos.x, pos.y, this.currentColor);
       const fillPixel: Pixel = {
         x: pos.x, y: pos.y, color: this.currentColor,
@@ -859,7 +868,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
     const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
-                   event.clientY >= rect.top  && event.clientY <= rect.bottom;
+      event.clientY >= rect.top && event.clientY <= rect.bottom;
 
     // Update cursor preview
     this.cursorVisible = inside;
@@ -899,7 +908,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.selectedTool !== 'brush' && this.selectedTool !== 'eraser') {
       this.finalizeShape();
     }
-    
+
     this.isDrawing = false;
     this.lastPos = null;
     this.startPos = null;
@@ -923,7 +932,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
         size: this.brushSize,
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       };
-      
+
       this.drawPixelLocally(pixel, true);
       this.lastPos = pos;
     } else {
@@ -958,7 +967,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private finalizeShape(): void {
     if (!this.startPos || !this.lastPos || !this.canUserDraw) return;
-    
+
     const pixel: Pixel = {
       x: this.startPos.x,
       y: this.startPos.y,
@@ -1004,7 +1013,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     // Surgical sync for shapes
     let x = pixel.x, y = pixel.y, w = pixel.width || 0, h = pixel.height || 0;
     if (pixel.type === 'CIRCLE') {
-      const radius = Math.sqrt(w*w + h*h);
+      const radius = Math.sqrt(w * w + h * h);
       x -= radius; y -= radius; w = radius * 2; h = radius * 2;
     } else if (pixel.type === 'LINE') {
       x = Math.min(pixel.x, pixel.fromX!);
@@ -1065,7 +1074,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private syncBufferRegion(x: number, y: number, w: number, h: number): void {
     if (!this.canvasBuffer) return;
     const canvas = this.canvasRef.nativeElement;
-    
+
     // Clamp to canvas boundaries
     const startX = Math.max(0, Math.floor(x));
     const startY = Math.max(0, Math.floor(y));
@@ -1079,7 +1088,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const regionData = this.ctx.getImageData(startX, startY, finalW, finalH);
       const region32 = new Uint32Array(regionData.data.buffer);
-      
+
       for (let row = 0; row < finalH; row++) {
         const targetOffset = (startY + row) * this.canvasWidth + startX;
         const sourceOffset = row * finalW;
@@ -1109,8 +1118,8 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public clearCanvas(): void {
     if (!this.canUserClear) {
-        this.toastService.info('El anfitrión ha restringido la limpieza de pizarra.');
-        return;
+      this.toastService.info('El anfitrión ha restringido la limpieza de pizarra.');
+      return;
     }
     this.showClearConfirm = true;
   }
@@ -1148,7 +1157,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private lastLocalFillY: number = -1;
   private lastLocalFillColor: string = '';
 
- 
+
 
   private floodFill(startX: number, startY: number, fillColor: string, isRemote = false): Promise<void> {
     return new Promise(async (resolve) => {
@@ -1157,13 +1166,13 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
         resolve();
         return;
       }
-      
+
       const canvas = this.canvasRef.nativeElement;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) { resolve(); return; }
 
       this.isFilling = true;
-      
+
       try {
         const width = canvas.width;
         const height = canvas.height;
@@ -1171,15 +1180,15 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // God-Mode: Use the persistent shadow buffer directly. No getImageData!
         const result = await this.executeFloodFillOnBuffer(this.canvasBuffer!, startX, startY, fillColor, width, height, true);
-        
+
         if (result) {
           const dirtyW = result.maxX - result.minX + 1;
           const dirtyH = result.maxY - result.minY + 1;
-          
+
           // God-Mode: surgical commit
           const imageData = new ImageData(
-            new Uint8ClampedArray(this.canvasBuffer!.buffer as any as ArrayBuffer), 
-            width, 
+            new Uint8ClampedArray(this.canvasBuffer!.buffer as any as ArrayBuffer),
+            width,
             height
           );
           ctx.putImageData(imageData, 0, 0, result.minX, result.minY, dirtyW, dirtyH);
@@ -1199,15 +1208,15 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
    * This is used by both the UI (floodFill) and the Batch History Processor.
    */
   private async executeFloodFillOnBuffer(
-    data32: Uint32Array, 
-    startX: number, 
-    startY: number, 
-    fillColor: string, 
-    width: number, 
+    data32: Uint32Array,
+    startX: number,
+    startY: number,
+    fillColor: string,
+    width: number,
     height: number,
     yieldEnabled: boolean = false
-  ): Promise<{minX: number, minY: number, maxX: number, maxY: number} | null> {
-    
+  ): Promise<{ minX: number, minY: number, maxX: number, maxY: number } | null> {
+
     let targetColor: number;
     if (fillColor === this.lastFillColor) {
       targetColor = this.lastTargetColor32;
@@ -1238,7 +1247,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
     while (stack.length > 0 && iterations < maxIter) {
       iterations++;
-      
+
       if (yieldEnabled && iterations % 1000 === 0) {
         if (performance.now() - lastYieldTime > 40) {
           await new Promise(r => setTimeout(r, 0));
@@ -1305,7 +1314,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
-    
+
     // Get client coordinates for both mouse and touch
     let clientX: number;
     let clientY: number;

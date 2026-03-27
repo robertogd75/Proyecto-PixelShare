@@ -12,7 +12,7 @@ export class PixelService {
     private readonly baseWsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws-pixels`;
     private socket$: WebSocketSubject<Pixel> | null = null;
 
-    constructor(private http: HttpClient) {}
+    constructor(private http: HttpClient) { }
 
     getPixels(roomId?: number): Observable<Pixel[]> {
         const url = roomId !== undefined ? `${this.apiUrl}?roomId=${roomId}` : this.apiUrl;
@@ -42,8 +42,8 @@ export class PixelService {
     }
 
     sendPixels(pixels: Pixel[]): void {
-        if (!this.socket$) return;
-        pixels.forEach(p => this.socket$?.next(p));
+        if (!this.socket$ || pixels.length === 0) return;
+        this.socket$.next(pixels as any);
     }
 
     disconnect(roomId?: number): void {

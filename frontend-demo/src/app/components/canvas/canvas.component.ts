@@ -291,16 +291,16 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private colorToUint32(fillColor: string): number {
-    if (fillColor === this.lastFillColor) {
-      return this.lastTargetColor32;
-    }
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = 1; tempCanvas.height = 1;
-    const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.fillStyle = fillColor;
-    tCtx.fillRect(0, 0, 1, 1);
-    const data = tCtx.getImageData(0, 0, 1, 1).data;
-    const targetColor = (data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0];
+    if (!fillColor || fillColor.length < 7) return 0xFF000000;
+    if (fillColor === this.lastFillColor) return this.lastTargetColor32;
+
+    const r = parseInt(fillColor.slice(1, 3), 16);
+    const g = parseInt(fillColor.slice(3, 5), 16);
+    const b = parseInt(fillColor.slice(5, 7), 16);
+    
+    // ABGR format (little-endian) for high-performance direct buffer manipulation
+    const targetColor = (255 << 24) | (b << 16) | (g << 8) | r;
+    
     this.lastFillColor = fillColor;
     this.lastTargetColor32 = targetColor;
     return targetColor;
@@ -573,8 +573,11 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   private drawPixelBatch(pixels: Pixel[]): void {
     if (pixels.length === 0) return;
     
-    this.ctx.strokeStyle = pixels[0].color;
-    this.ctx.lineWidth = pixels[0].size || 5;
+    const first = pixels[0];
+    const colorInt = this.colorToUint32(first.color);
+    
+    this.ctx.strokeStyle = first.color;
+    this.ctx.lineWidth = first.size || 5;
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     this.ctx.beginPath();
@@ -592,7 +595,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.canvasBuffer) {
         const idx = Math.floor(p.y) * this.canvasWidth + Math.floor(p.x);
         if (idx >= 0 && idx < this.canvasBuffer.length) {
-          this.canvasBuffer[idx] = this.colorToUint32(p.color);
+          this.canvasBuffer[idx] = colorInt;
         }
       }
       

@@ -143,6 +143,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Performance Architecture (v2): Frame-Aligned Rendering & Pulsed Emission
   private incomingBuffer: Pixel[] = [];
+  private localBuffer: Pixel[] = []; // Prioritized local drawing
   private outgoingBuffer: Pixel[] = [];
   private lastPulseTime = 0;
   private animationFrameId: number | null = null;
@@ -520,14 +521,44 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
    * Drains the incoming buffer and pulses the outgoing buffer.
    */
   private renderLoop(): void {
-    // 1. Process Incoming Batch
-    if (this.incomingBuffer.length > 0) {
-      const batch = [...this.incomingBuffer];
-      this.incomingBuffer = [];
-      batch.forEach(p => this.drawPixelLocally(p, false));
+    const startTime = performance.now();
+    const frameBudget = 8; // ms budget per frame
+
+    // 1. Process LOCAL actions first for immediate feedback
+    while (this.localBuffer.length > 0) {
+      const pixels = this.localBuffer.splice(0, 50); // Batch 50 at a time
+      this.drawPixelBatch(pixels);
     }
 
-    // 2. Pulsed Outgoing Emission (30ms pulse)
+    // 2. Process REMOTE/HISTORY actions (Time-Sliced)
+    while (this.incomingBuffer.length > 0 && (performance.now() - startTime) < frameBudget) {
+      const first = this.incomingBuffer[0];
+      
+      if (first.type === 'RECT' || first.type === 'CIRCLE' || first.type === 'LINE') {
+        this.drawShapeLocally(this.incomingBuffer.shift()!);
+      } else if (first.type === 'FILL') {
+        const fill = this.incomingBuffer.shift()!;
+        this.floodFill(fill.x, fill.y, fill.color, true);
+      } else {
+        // Batch regular pixels
+        const batch: Pixel[] = [];
+        const sourceId = first.roomId;
+        const color = first.color;
+        const size = first.size;
+
+        while (this.incomingBuffer.length > 0 && 
+               this.incomingBuffer[0].roomId === sourceId &&
+               this.incomingBuffer[0].color === color &&
+               this.incomingBuffer[0].size === size &&
+               !this.incomingBuffer[0].type) {
+          batch.push(this.incomingBuffer.shift()!);
+          if (batch.length > 50) break;
+        }
+        if (batch.length > 0) this.drawPixelBatch(batch);
+      }
+    }
+
+    // 3. Pulsed Outgoing Emission
     const now = performance.now();
     if (now - this.lastPulseTime > 30 && this.outgoingBuffer.length > 0) {
       const batch = [...this.outgoingBuffer];
@@ -537,6 +568,44 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.animationFrameId = requestAnimationFrame(() => this.renderLoop());
+  }
+
+  private drawPixelBatch(pixels: Pixel[]): void {
+    if (pixels.length === 0) return;
+    
+    this.ctx.strokeStyle = pixels[0].color;
+    this.ctx.lineWidth = pixels[0].size || 5;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.ctx.beginPath();
+
+    pixels.forEach(p => {
+      if (p.fromX != null && p.fromY != null) {
+        this.ctx.moveTo(p.fromX, p.fromY);
+      } else {
+        this.ctx.moveTo(p.x, p.y);
+      }
+      this.ctx.lineTo(p.x, p.y);
+      
+      // Dual-Write: Update shadow buffer directly for simple 1px core
+      // (This avoids getImageData bottleneck for Bucket Tool in many cases)
+      if (this.canvasBuffer) {
+        const idx = Math.floor(p.y) * this.canvasWidth + Math.floor(p.x);
+        if (idx >= 0 && idx < this.canvasBuffer.length) {
+          this.canvasBuffer[idx] = this.colorToUint32(p.color);
+        }
+      }
+      
+      // Update bounds for sync
+      const pad = (p.size || 5) + 10;
+      const x = Math.min(p.x, p.fromX ?? p.x) - pad;
+      const y = Math.min(p.y, p.fromY ?? p.y) - pad;
+      const w = Math.abs(p.x - (p.fromX ?? p.x)) + pad * 2;
+      const h = Math.abs(p.y - (p.fromY ?? p.y)) + pad * 2;
+      this.updateDirtyBounds(x, y, w, h);
+    });
+
+    this.ctx.stroke();
   }
 
   private isLastFillOurs(pixel: Pixel): boolean {
@@ -579,10 +648,8 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       // Overdrive: Filter self-broadcasted fills
       if (this.isLastFillOurs(pixel)) return;
       this.floodFill(pixel.x, pixel.y, pixel.color, true);
-    } else if (pixel.type === 'RECT' || pixel.type === 'CIRCLE' || pixel.type === 'LINE') {
-      this.drawShapeLocally(pixel);
     } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
-      // High Performance: Queue pixel for frame-aligned rendering
+      // Unified Performance Queue: All drawing goes through renderLoop
       this.incomingBuffer.push(pixel);
     }
 
@@ -819,13 +886,15 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentStrokeBounds = { minX: pos.x, minY: pos.y, maxX: pos.x, maxY: pos.y };
 
     if (this.selectedTool === 'brush' || this.selectedTool === 'eraser') {
-      this.drawPixelLocally({
+      const p: Pixel = {
         x: pos.x,
         y: pos.y,
-        color: this.selectedTool === 'eraser' ? '#FFFFFF' : this.currentColor,
+        color: this.selectedTool === 'eraser' ? this.themeBgColor : this.currentColor,
         size: this.brushSize,
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
-      }, true);
+      };
+      this.localBuffer.push(p);
+      this.outgoingBuffer.push(p);
     } else if (this.selectedTool === 'fill') {
       if (this.isFilling) return;
       this.lastLocalFillX = pos.x;
@@ -941,8 +1010,11 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
         roomId: this.currentRoomId ? Number(this.currentRoomId) : undefined
       };
 
-      this.drawPixelLocally(pixel, true);
+      this.localBuffer.push(pixel); // Add to priority local buffer
+      this.outgoingBuffer.push(pixel); // Send to others
       this.lastPos = pos;
+      this.isDirty = true;
+
     } else {
       this.lastPos = pos;
       this.drawPreview(pos);

@@ -43,6 +43,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   public isRoomHost = false;
   public toolbarVisible = true;
   private canvasBuffer: Uint32Array | null = null;
+  private cachedRect: DOMRect | null = null;
   public canvasWidth = 2828;
   public canvasHeight = 2000;
 
@@ -371,14 +372,13 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     const canvas = this.canvasRef.nativeElement;
     const tCanvas = this.tempCanvasRef.nativeElement;
 
-    if (canvas.width !== this.canvasWidth || canvas.height !== this.canvasHeight) {
-      canvas.width = this.canvasWidth;
-      canvas.height = this.canvasHeight;
-      tCanvas.width = this.canvasWidth;
-      tCanvas.height = this.canvasHeight;
-      this.initBuffer(); // Re-allocate shadow buffer
-      this.reinitCanvasSettings();
-    }
+    canvas.width = this.canvasWidth;
+    canvas.height = this.canvasHeight;
+    tCanvas.width = this.canvasWidth;
+    tCanvas.height = this.canvasHeight;
+    this.cachedRect = null; // Invalidate cache on resize
+    this.initBuffer(); // Re-allocate shadow buffer
+    this.reinitCanvasSettings();
     requestAnimationFrame(() => this.fitZoom());
   }
 
@@ -611,10 +611,13 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       event.preventDefault();
       const delta = event.deltaY > 0 ? -0.1 : 0.1;
       this.zoomLevel = Math.min(Math.max(this.minZoom, this.zoomLevel + delta), 2.0);
+      this.cachedRect = null; // Invalidate cache on zoom change
     } else if (event.shiftKey) {
       event.preventDefault();
       this.viewportRef.nativeElement.scrollLeft += event.deltaY;
+      this.cachedRect = null; // Invalidate cache on scroll
     }
+
   }
 
   public copyInviteUrl(): void {
@@ -804,6 +807,9 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isDirty = true; // Mark as dirty on first local action
 
 
+    const canvas = this.canvasRef.nativeElement;
+    this.cachedRect = canvas.getBoundingClientRect(); // Cache rect once per stroke
+    
     const pos = this.getEventPos(event);
     this.isDrawing = true;
     this.startPos = pos;
@@ -866,7 +872,9 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   @HostListener('window:mousemove', ['$event'])
   onWindowMouseMove(event: MouseEvent): void {
     const canvas = this.canvasRef.nativeElement;
-    const rect = canvas.getBoundingClientRect();
+    // Performance v3: Use cached rect if available (Surgical Reflow Caching)
+    // This avoids calling getBoundingClientRect() multiple times per mousemove event.
+    const rect = this.cachedRect || canvas.getBoundingClientRect();
     const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
       event.clientY >= rect.top && event.clientY <= rect.bottom;
 
@@ -1300,20 +1308,13 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     return { minX, minY, maxX, maxY };
   }
 
-
-
-
-
-
-
-
-
-
-
   private getEventPos(event: any): { x: number, y: number } {
 
     const canvas = this.canvasRef.nativeElement;
-    const rect = canvas.getBoundingClientRect();
+    
+    // Performance v3: Use cached rect if available (Surgical Reflow Caching)
+    // This avoids calling getBoundingClientRect() multiple times per mousemove event.
+    const rect = this.cachedRect || canvas.getBoundingClientRect();
 
     // Get client coordinates for both mouse and touch
     let clientX: number;

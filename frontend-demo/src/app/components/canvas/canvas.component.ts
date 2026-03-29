@@ -195,7 +195,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       this.cdr.detectChanges();
     });
 
-    this.renderLoop(); // Start high-performance tick loop
+    // Removed renderLoop() for emergency restoration
   }
 
   ngOnDestroy(): void {
@@ -523,55 +523,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
    * Performance Architecture (v2): Tick-system Render Loop
    * Drains the incoming buffer and pulses the outgoing buffer.
    */
-  private renderLoop(): void {
-    const startTime = performance.now();
-    const frameBudget = 8; // ms budget per frame
-
-    // 1. Process LOCAL actions first for immediate feedback
-    while (this.localBuffer.length > 0) {
-      const pixels = this.localBuffer.splice(0, 50); // Batch 50 at a time
-      this.drawPixelBatch(pixels);
-    }
-
-    // 2. Process REMOTE/HISTORY actions (Time-Sliced)
-    while (this.incomingBuffer.length > 0 && (performance.now() - startTime) < frameBudget) {
-      const first = this.incomingBuffer[0];
-      
-      if (first.type === 'RECT' || first.type === 'CIRCLE' || first.type === 'LINE') {
-        this.drawShapeLocally(this.incomingBuffer.shift()!);
-      } else if (first.type === 'FILL') {
-        const fill = this.incomingBuffer.shift()!;
-        this.floodFill(fill.x, fill.y, fill.color, true);
-      } else {
-        // Batch regular pixels
-        const batch: Pixel[] = [];
-        const sourceId = first.roomId;
-        const color = first.color;
-        const size = first.size;
-
-        while (this.incomingBuffer.length > 0 && 
-               this.incomingBuffer[0].roomId === sourceId &&
-               this.incomingBuffer[0].color === color &&
-               this.incomingBuffer[0].size === size &&
-               !this.incomingBuffer[0].type) {
-          batch.push(this.incomingBuffer.shift()!);
-          if (batch.length > 50) break;
-        }
-        if (batch.length > 0) this.drawPixelBatch(batch);
-      }
-    }
-
-    // 3. Pulsed Outgoing Emission
-    const now = performance.now();
-    if (now - this.lastPulseTime > 30 && this.outgoingBuffer.length > 0) {
-      const batch = [...this.outgoingBuffer];
-      this.outgoingBuffer = [];
-      this.pixelService.sendPixels(batch);
-      this.lastPulseTime = now;
-    }
-
-    this.animationFrameId = requestAnimationFrame(() => this.renderLoop());
-  }
+  // (renderLoop was here, removed for direct sync mode)
 
   private drawPixelBatch(pixels: Pixel[]): void {
     if (pixels.length === 0) return;
@@ -623,7 +575,7 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private setupWebSocket(roomId?: number): void {
     this.pixelService.connect(roomId).subscribe(data => {
-      // Handle both single pixel objects and batched pixel arrays (Overdrive Architecture)
+      // Direct rendering for emergency restoration
       if (Array.isArray(data)) {
         data.forEach(p => this.handleIncomingPixel(p, roomId));
       } else {
@@ -652,9 +604,8 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.isLastFillOurs(pixel)) return;
       this.floodFill(pixel.x, pixel.y, pixel.color, true);
     } else if (!roomId || pixel.roomId == roomId) {
-      // Unified Performance Queue: All drawing goes through renderLoop
-      if (!pixel.type) { console.log('Pixel incoming:', pixel.x, pixel.y); }
-      this.incomingBuffer.push(pixel);
+      // Direct drawing for maximum reliability
+      this.drawPixelLocally(pixel, false);
     }
 
     if (pixel.type === 'SETTINGS_UPDATE') {
@@ -1134,8 +1085,8 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (isLocal) {
       this.isDirty = true;
-      // Send for collaboration via pulsed buffer
-      this.outgoingBuffer.push(pixel);
+      // Immediate emission for direct sync mode
+      this.pixelService.sendPixel(pixel);
     }
   }
 

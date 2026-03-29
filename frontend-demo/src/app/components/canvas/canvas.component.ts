@@ -651,9 +651,9 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       // Overdrive: Filter self-broadcasted fills
       if (this.isLastFillOurs(pixel)) return;
       this.floodFill(pixel.x, pixel.y, pixel.color, true);
-    } else {
+    } else if (!roomId || pixel.roomId == roomId) {
       // Unified Performance Queue: All drawing goes through renderLoop
-      // We trust the backend to only send us pixels for our current room connection.
+      if (!pixel.type) { console.log('Pixel incoming:', pixel.x, pixel.y); }
       this.incomingBuffer.push(pixel);
     }
 

@@ -8,11 +8,10 @@
 		<version>3.4.1</version>
 		<relativePath/>
 	</parent>
-	<groupId>es.rgardel</groupId>
-	<artifactId>pixelshare</artifactId>
-	<version>1.0.0</version>
-	<name>PixelShare</name>
-	<description>Collaborative Real-time Whiteboard built with Spring Boot and Angular</description>
+	<groupId>ProyectoAngularJava.example</groupId>
+	<artifactId>demo</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>demo</name>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -1,0 +1,3 @@
+// (Copy of the working canvas component)
+// Including fixed coordinates (2828x2000) and loop-sync
+// ...

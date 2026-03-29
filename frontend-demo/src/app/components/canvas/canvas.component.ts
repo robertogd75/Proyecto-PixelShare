@@ -343,13 +343,13 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
               this.currentRoomCode = room.code;
               this.canvasTitle = `Sala: ${room.name}`;
               this.isRoomHost = sessionStorage.getItem('pixelshare_host_room') === room.code;
-              this.canvasWidth = 5657;
-              this.canvasHeight = 4000;
-              this.resizeCanvas();
-              this.refillCanvasBackground();
-
-              this.loadInitialState();
-              this.setupWebSocket(this.currentRoomId);
+               this.canvasWidth = 2828;
+               this.canvasHeight = 2000;
+               this.resizeCanvas();
+               this.refillCanvasBackground();
+ 
+               this.loadInitialState();
+               this.setupWebSocket(this.currentRoomId);
             } else {
               this.toastService.error('Sala no encontrada. Comprueba el código e inténtalo de nuevo.');
               this.router.navigate(['/']);
@@ -651,8 +651,9 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       // Overdrive: Filter self-broadcasted fills
       if (this.isLastFillOurs(pixel)) return;
       this.floodFill(pixel.x, pixel.y, pixel.color, true);
-    } else if (pixel.roomId === roomId || (roomId === undefined && !pixel.roomId)) {
+    } else {
       // Unified Performance Queue: All drawing goes through renderLoop
+      // We trust the backend to only send us pixels for our current room connection.
       this.incomingBuffer.push(pixel);
     }
 

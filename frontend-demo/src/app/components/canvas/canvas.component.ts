@@ -343,6 +343,8 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
               this.currentRoomCode = room.code;
               this.canvasTitle = `Sala: ${room.name}`;
               this.isRoomHost = sessionStorage.getItem('pixelshare_host_room') === room.code;
+              this.allowAllDraw = room.allowAllDraw ?? true;
+              this.allowAllClear = room.allowAllClear ?? true;
                this.canvasWidth = 2828;
                this.canvasHeight = 2000;
                this.resizeCanvas();
@@ -1336,12 +1338,10 @@ export class CanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private getEventPos(event: any): { x: number, y: number } {
-
     const canvas = this.canvasRef.nativeElement;
-    
-    // Performance v3: Use cached rect if available (Surgical Reflow Caching)
-    // This avoids calling getBoundingClientRect() multiple times per mousemove event.
-    const rect = this.cachedRect || canvas.getBoundingClientRect();
+    // Force fresh rect to avoid issues with dynamic layouts or zoom
+    const rect = canvas.getBoundingClientRect();
+    this.cachedRect = rect;
 
     // Get client coordinates for both mouse and touch
     let clientX: number;

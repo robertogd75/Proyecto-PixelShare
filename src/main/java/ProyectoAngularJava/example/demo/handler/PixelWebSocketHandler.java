@@ -142,9 +142,17 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
             if (roomId > 1) {
                 String hostSessionId = roomHostSessionId.get(roomId);
                 if (sessionId.equals(hostSessionId)) {
-                    System.out.println("Host " + sessionId + " disconnected from room " + roomId
-                            + ". Room preserved for grace period.");
                     roomHostSessionId.remove(roomId);
+                    // Pass host to next available session
+                    Set<WebSocketSession> roomSessionsSet = roomSessions.get(roomId);
+                    if (roomSessionsSet != null && !roomSessionsSet.isEmpty()) {
+                        WebSocketSession nextHost = roomSessionsSet.iterator().next();
+                        roomHostSessionId.put(roomId, nextHost.getId());
+                        System.out.println("Host handover: Session " + nextHost.getId() + " is now host of room " + roomId);
+                    } else {
+                        System.out.println("Host " + sessionId + " disconnected from room " + roomId
+                                + ". Room is now empty.");
+                    }
                 } else {
                     Integer current = roomParticipants.get(roomId);
                     if (current != null) {
@@ -245,7 +253,11 @@ public class PixelWebSocketHandler extends TextWebSocketHandler {
 
     private boolean canDrawBatch(String sessionId, Long roomId) {
         boolean isHost = roomId != null && sessionId.equals(roomHostSessionId.get(roomId));
-        return roomId == null || isHost || roomAllowAllDraw.getOrDefault(roomId, true);
+        boolean allowed = roomId == null || isHost || roomAllowAllDraw.getOrDefault(roomId, true);
+        if (!allowed) {
+            System.out.println("Rejected draw from session " + sessionId + " in room " + roomId + " (Permissions restricted)");
+        }
+        return allowed;
     }
 
     private void processSinglePixel(WebSocketSession session, Pixel pixel, TextMessage originalMessage)
